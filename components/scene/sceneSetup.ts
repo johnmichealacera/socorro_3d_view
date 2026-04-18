@@ -52,10 +52,10 @@ export function createLights(scene: THREE.Scene): {
   sun.shadow.mapSize.height = 4096;
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 250;
-  sun.shadow.camera.left = -70;
-  sun.shadow.camera.right = 70;
-  sun.shadow.camera.top = 70;
-  sun.shadow.camera.bottom = -70;
+  sun.shadow.camera.left = -100;
+  sun.shadow.camera.right = 100;
+  sun.shadow.camera.top = 100;
+  sun.shadow.camera.bottom = -100;
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.02;
   scene.add(sun);

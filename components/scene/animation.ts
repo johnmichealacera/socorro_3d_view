@@ -65,6 +65,8 @@ export function buildingCameraTarget(
     market: 0.0,
     port: -0.8,
     school: 0.5,
+    beach: -0.7,
+    recreation: 0.4,
   };
   const a = Math.PI * (angles[category] ?? 0);
   const dist = 14;

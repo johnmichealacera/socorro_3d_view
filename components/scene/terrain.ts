@@ -5,8 +5,9 @@ import * as THREE from "three";
 // East coast (bay) at x ≈ +32.  Inland hills rise to the west (−x).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TERRAIN_SIZE = 100;
-const TERRAIN_SEGS = 192;
+const TERRAIN_SIZE = 160;
+const HALF_SIZE    = 80;   // half of TERRAIN_SIZE
+const TERRAIN_SEGS = 256;
 const SHORE_X = 30; // coastline X in scene units
 
 /** Procedural terrain height at any (x, z) position in scene units. */
@@ -40,10 +41,10 @@ export function terrainHeight(x: number, z: number): number {
 // ─── Satellite-Style Terrain Texture ─────────────────────────────────────────
 
 function wx(worldX: number, W: number): number {
-  return ((worldX + 50) / 100) * W;
+  return ((worldX + HALF_SIZE) / TERRAIN_SIZE) * W;
 }
 function wz(worldZ: number, H: number): number {
-  return ((worldZ + 50) / 100) * H;
+  return ((worldZ + HALF_SIZE) / TERRAIN_SIZE) * H;
 }
 
 /** Draw a natural vegetation patch using layered ellipses */
@@ -145,6 +146,20 @@ function generateSatelliteTexture(): THREE.CanvasTexture {
     vegPatch(ctx, wx(ox, W), wz(oz, H), 8 + Math.random() * 20, 6 + Math.random() * 15, "#2e6828", 0.35);
   }
 
+  // ── 8b. Puyangi White Beach — sandy resort patch near shore ──────────
+  const beachGrad2 = ctx.createLinearGradient(wx(22, W), wz(38, H), wx(32, W), wz(50, H));
+  beachGrad2.addColorStop(0, "#d8c878");
+  beachGrad2.addColorStop(0.6, "#e8d888");
+  beachGrad2.addColorStop(1, "#f0e098");
+  ctx.save();
+  ctx.globalAlpha = 0.80;
+  ctx.fillStyle = beachGrad2;
+  ctx.fillRect(wx(22, W), wz(38, H), wx(32, W) - wx(22, W), wz(50, H) - wz(38, H));
+  ctx.restore();
+
+  // ── 8c. Taruc Swimming Pool area — lighter clearing ───────────────────
+  vegPatch(ctx, wx(16, W), wz(34, H), (4 / 160) * W, (3 / 160) * H, "#d8d0b8", 0.55);
+
   // ── 9. Urban block texture (updated to match new landmark positions) ──
   ctx.save();
   ctx.globalAlpha = 0.50;
@@ -194,6 +209,8 @@ function generateSatelliteTexture(): THREE.CanvasTexture {
   drawRoad([[-9,0],[-9,3]], localW, localColor);                                // Pawnshop ↔ Sofeco Store
   drawRoad([[-9,0],[-13,-4],[-17,-8],[-20,-10],[-22,-12]], localW, localColor); // Pawnshop → Elementary
   drawRoad([[-22,-12],[-27,-12],[-31,-12],[-35,-12]], localW, localColor);      // Elementary → Hospital
+  drawRoad([[11,12],[10,17],[8,22]], localW, localColor);                         // Main road → High School
+  drawRoad([[8,22],[12,28],[16,34],[22,40],[28,44]], mainW, mainColor);           // HS → Taruc → Puyangi
 
   // ── 11. Building patches at updated LOCATIONS positions ───────────────
   const roofPatches: { x: number; z: number; w: number; h: number; fill: string }[] = [
@@ -210,6 +227,8 @@ function generateSatelliteTexture(): THREE.CanvasTexture {
     { x: -9.6, z: -0.5, w: 1.4, h: 1.0, fill: "#1a9ab0" }, // Pawnshop – teal
     { x: -9.6, z:  2.6, w: 2.0, h: 1.2, fill: "#3a7828" }, // Sofeco Store – green
     { x: -6.6, z: -0.5, w: 2.3, h: 1.4, fill: "#7a6848" }, // Sofeco Hardware – brown
+    { x: 15.0, z: 33.2, w: 4.5, h: 3.5, fill: "#2090c0" }, // Taruc Pool – blue water
+    { x: 26.5, z: 42.5, w: 5.5, h: 4.5, fill: "#e8d888" }, // Puyangi Beach – sandy
   ];
   ctx.save();
   ctx.globalAlpha = 0.7;

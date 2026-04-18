@@ -25,6 +25,8 @@ import {
   animateCameraTo,
   type CameraTarget,
 } from "./scene/animation";
+import { createNPCs, updateNPCs, disposeNPCs, type NPCData } from "./scene/npcs";
+import { createBoats, updateBoats, disposeBoats, type BoatData } from "./scene/boats";
 
 import { LOCATIONS } from "./scene/locations";
 import { LocationData, BuildingGroup } from "./scene/types";
@@ -40,6 +42,8 @@ export default function IslandViewer() {
   const controlsRef = useRef<OrbitControls | null>(null);
   const buildingsRef= useRef<BuildingGroup[]>([]);
   const waterRef    = useRef<WaterMesh | null>(null);
+  const npcsRef     = useRef<NPCData[]>([]);
+  const boatsRef    = useRef<BoatData[]>([]);
   const rafRef      = useRef<number>(0);
 
   const hoveredIdRef  = useRef<string | null>(null);
@@ -114,6 +118,12 @@ export default function IslandViewer() {
     const buildings = createBuildings(scene, terrain, LOCATIONS);
     buildingsRef.current = buildings;
 
+    // NPCs — spawned after buildings so terrain height is available
+    npcsRef.current = createNPCs(scene, buildings);
+
+    // Boats — placed in the bay east of the port
+    boatsRef.current = createBoats(scene);
+
     // Vegetation
     createVegetation(scene);
 
@@ -133,13 +143,24 @@ export default function IslandViewer() {
     const composer = createPostProcessing(renderer, scene, camera);
     composerRef.current = composer;
 
-    // OrbitControls
+    // OrbitControls — map-style: left-drag pans, right-drag orbits
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping    = true;
     controls.dampingFactor    = 0.06;
     controls.minDistance      = 4;
-    controls.maxDistance      = 180;
+    controls.maxDistance      = 280;
     controls.maxPolarAngle    = Math.PI / 2.1;
+    controls.screenSpacePanning = false;          // pan along world horizontal plane
+    controls.panSpeed         = 1.4;              // slightly faster panning
+    controls.mouseButtons     = {
+      LEFT:   THREE.MOUSE.PAN,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT:  THREE.MOUSE.ROTATE,
+    };
+    controls.touches          = {
+      ONE: THREE.TOUCH.PAN,           // one-finger drag = pan (map-like)
+      TWO: THREE.TOUCH.DOLLY_ROTATE,  // pinch/rotate = zoom + orbit
+    };
     controls.target.set(3, 0, 5);
     controls.update();
     controlsRef.current = controls;
@@ -190,16 +211,25 @@ export default function IslandViewer() {
 
     // ── Animation loop ────────────────────────────────────────────────────
     const clock = new THREE.Timer();
+    let prevT = 0;
 
     const animate = () => {
       rafRef.current = requestAnimationFrame(animate);
       clock.update();
-      const t = clock.getElapsed();
+      const t     = clock.getElapsed();
+      const delta = Math.min(t - prevT, 0.05); // cap at 50 ms to avoid large jumps
+      prevT = t;
 
       // Water
       if (waterRef.current) {
         updateWater(waterRef.current, t, camera.position);
       }
+
+      // NPCs
+      updateNPCs(npcsRef.current, t, delta);
+
+      // Boats
+      updateBoats(boatsRef.current, t);
 
       // Hover detection
       raycaster.current.setFromCamera(mouse.current, camera);
@@ -241,6 +271,8 @@ export default function IslandViewer() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("click", onClick);
+      disposeNPCs(npcsRef.current);
+      disposeBoats(boatsRef.current);
       controls.dispose();
       composer.dispose();
       renderer.dispose();

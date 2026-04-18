@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background — deep ocean blue -->
+  <rect width="32" height="32" rx="7" fill="#0C4A6E"/>
+
+  <!-- Water surface gradient band -->
+  <rect x="0" y="19" width="32" height="13" rx="4" fill="#0369A1"/>
+  <rect x="0" y="21" width="32" height="11" fill="#0284C7"/>
+
+  <!-- Wave hints -->
+  <path d="M2 23 Q7 21 12 23 Q17 25 22 23 Q27 21 30 23" fill="none" stroke="#38BDF8" stroke-width="0.8" opacity="0.55"/>
+  <path d="M4 26 Q9 24 14 26 Q19 28 24 26 Q28 24 31 26" fill="none" stroke="#38BDF8" stroke-width="0.7" opacity="0.40"/>
+
+  <!-- Island / land mass -->
+  <ellipse cx="16" cy="22" rx="10" ry="4" fill="#15803D"/>
+  <ellipse cx="14" cy="21" rx="5.5" ry="2.8" fill="#16A34A"/>
+  <ellipse cx="17" cy="20.5" rx="2.5" ry="1.8" fill="#22C55E"/>
+
+  <!-- Palm tree suggestion (small, iconic) -->
+  <rect x="15.4" y="13" width="1.2" height="5" rx="0.5" fill="#854D0E"/>
+  <ellipse cx="15" cy="13" rx="2.5" ry="1.2" fill="#166534"/>
+  <ellipse cx="17" cy="12.5" rx="2.2" ry="1.1" fill="#15803D"/>
+  <ellipse cx="16" cy="11.8" rx="1.8" ry="1.0" fill="#22C55E"/>
+
+  <!-- Location pin -->
+  <circle cx="16" cy="8" r="4.5" fill="#EF4444"/>
+  <circle cx="16" cy="8" r="2.0" fill="#FEF2F2"/>
+  <!-- Pin tail -->
+  <path d="M13.2 10.8 Q16 17 16 17 Q16 17 18.8 10.8" fill="#DC2626"/>
+</svg>

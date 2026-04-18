@@ -835,17 +835,159 @@ function buildSofecoHardware(): THREE.Group {
   return g;
 }
 
+/** Puyangi White Beach Resort — beachfront pavilion, cabanas, umbrellas */
+function buildBeach(): THREE.Group {
+  const g = new THREE.Group();
+
+  // Sandy ground platform
+  const sand = box(7.0, 0.07, 6.0, mat(0xe8d888, 0.95), false);
+  sand.position.y = 0.04;
+  g.add(sand);
+
+  // Main reception / office building
+  const reception = box(2.8, 1.30, 1.5, mat(0xf5ead0, 0.88));
+  reception.position.set(-1.8, 0.75, -1.8);
+  g.add(reception);
+
+  // Reception nipa roof (gabled)
+  const recRoofGeo = new THREE.CylinderGeometry(0, 1.65, 0.75, 4, 1, false);
+  recRoofGeo.rotateY(Math.PI / 4);
+  const recRoof = new THREE.Mesh(recRoofGeo, mat(0x7a5020, 0.90));
+  recRoof.castShadow = true;
+  recRoof.position.set(-1.8, 1.68, -1.8);
+  g.add(recRoof);
+
+  // Welcome sign on reception
+  const sign = box(2.0, 0.38, 0.05, mat(0x1a5a8a, 0.72));
+  sign.position.set(-1.8, 1.42, -1.05);
+  g.add(sign);
+
+  // Beach cabanas (3 along the shore side)
+  for (let i = 0; i < 3; i++) {
+    const cabana = box(1.4, 0.9, 1.2, mat(0xf0e8d0, 0.90));
+    cabana.position.set(1.8, 0.55, -1.8 + i * 1.7);
+    g.add(cabana);
+    const cabRoof = cone(0.88, 0.60, 8, mat(0x9a6830, 0.88));
+    cabRoof.position.set(1.8, 1.20, -1.8 + i * 1.7);
+    g.add(cabRoof);
+  }
+
+  // Beach umbrellas (colorful) with poles
+  const umbColors = [0xff3333, 0x3399ff, 0xffcc00, 0x33cc33, 0xff66cc, 0xff9900];
+  const umbPos: [number, number][] = [[-0.5, 1.2],[0.8, 1.8],[-0.2, 2.5],[1.2, 0.5],[-1.0, 1.8],[0.4, 0.8]];
+  for (let i = 0; i < umbPos.length; i++) {
+    const [ux, uz] = umbPos[i];
+    const pole = cyl(0.022, 0.028, 1.15, 5, M.flagPole);
+    pole.position.set(ux, 0.62, uz);
+    g.add(pole);
+    const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.22, 8), mat(umbColors[i % umbColors.length], 0.72));
+    canopy.castShadow = true;
+    canopy.position.set(ux, 1.26, uz);
+    g.add(canopy);
+  }
+
+  // Entrance posts / arch
+  for (const px of [-3.2, 3.2]) {
+    const post = cyl(0.06, 0.08, 2.0, 6, mat(0xa07030, 0.88));
+    post.position.set(px, 1.0, -3.2);
+    g.add(post);
+  }
+  const archBar = box(6.6, 0.10, 0.12, mat(0xa07030, 0.88));
+  archBar.position.set(0, 2.05, -3.2);
+  g.add(archBar);
+
+  // Narrow pathway to shoreline
+  const path = box(0.6, 0.04, 2.5, mat(0xd8c878, 0.94), false);
+  path.position.set(0, 0.06, 3.0);
+  g.add(path);
+
+  return g;
+}
+
+/** Taruc Swimming Pool — pool basin, deck, admin building, diving board */
+function buildSwimmingPool(): THREE.Group {
+  const g = new THREE.Group();
+
+  // Concrete pool deck
+  const deck = box(5.5, 0.10, 4.5, mat(0xc8c0b0, 0.88), false);
+  deck.position.y = 0.05;
+  g.add(deck);
+
+  // Pool basin inner (blue water)
+  const poolMat = mat(0x1890c8, 0.12, 0.30, { transparent: true, opacity: 0.88 });
+  const pool = box(3.8, 0.06, 2.8, poolMat);
+  pool.position.set(0, 0.10, 0);
+  g.add(pool);
+
+  // Pool rim / edge tiles (4 sides)
+  const rimMat = mat(0xdad2c0, 0.82);
+  const rims: [number, number, number, number, number][] = [
+    [0, 1.55, 0.12, 0.20, 2.9],   // front
+    [0, -1.55, 0.12, 0.20, 2.9],  // back
+    [2.05, 0, 3.9, 0.20, 0.12],   // right
+    [-2.05, 0, 3.9, 0.20, 0.12],  // left
+  ];
+  for (const [rx, rz, rw, rh, rd] of rims) {
+    const rim = box(rw, rh, rd, rimMat);
+    rim.position.set(rx, 0.14, rz);
+    g.add(rim);
+  }
+
+  // Administration / changing rooms building
+  const admin = box(2.4, 1.3, 1.2, mat(0xf0ece0, 0.88));
+  admin.position.set(-1.8, 0.75, -2.5);
+  g.add(admin);
+  const adminRoof = box(2.6, 0.09, 1.4, mat(0x3a7ab8, 0.55, 0.15));
+  adminRoof.position.set(-1.8, 1.39, -2.5);
+  g.add(adminRoof);
+
+  // Entrance gate posts
+  for (const px of [-0.45, 0.45]) {
+    const gpost = box(0.14, 1.1, 0.14, mat(0xc8c0b8, 0.85));
+    gpost.position.set(px, 0.60, -2.5);
+    g.add(gpost);
+  }
+
+  // Diving board
+  const boardPost = box(0.09, 0.45, 0.09, mat(0xb0b0b8, 0.42, 0.55));
+  boardPost.position.set(1.7, 0.28, -1.1);
+  g.add(boardPost);
+  const board = box(0.22, 0.055, 0.95, mat(0xffaa22, 0.68, 0.08));
+  board.position.set(1.7, 0.52, -0.7);
+  g.add(board);
+
+  // Lounge chairs (6)
+  const loungeColor = mat(0xf0b030, 0.80);
+  const loungePos: [number, number][] = [[-2.4, 0.9],[-2.4, -0.2],[-2.4,-1.3],[2.4, 0.9],[2.4,-0.2],[2.4,-1.3]];
+  for (const [lx, lz] of loungePos) {
+    const chair = box(0.38, 0.06, 0.85, loungeColor);
+    chair.position.set(lx, 0.15, lz);
+    g.add(chair);
+  }
+
+  // Pool fence posts along front edge
+  for (let i = 0; i < 9; i++) {
+    const fp = cyl(0.028, 0.035, 0.85, 5, mat(0xb0b0a8, 0.68, 0.15));
+    fp.position.set(-3.0 + i * 0.75, 0.47, 2.5);
+    g.add(fp);
+  }
+
+  return g;
+}
+
 // ─── Builders Map ────────────────────────────────────────────────────────────
 
 const BUILDERS: Record<LocationData["category"], () => THREE.Group> = {
-  government: buildMunicipalHall,
-  church:     buildChurch,
-  market:     buildMarket,
-  port:       buildPort,
-  school:     buildElementarySchool, // overridden per location below
-  plaza:      buildPlaza,
-  hospital:   buildHospital,
-  commercial: buildSoemco,           // overridden per id below
+  government:  buildMunicipalHall,
+  church:      buildChurch,
+  market:      buildMarket,
+  port:        buildPort,
+  school:      buildElementarySchool, // overridden per location below
+  plaza:       buildPlaza,
+  hospital:    buildHospital,
+  commercial:  buildSoemco,           // overridden per id below
+  beach:       buildBeach,
+  recreation:  buildSwimmingPool,
 };
 
 // ─── Selection Ring ───────────────────────────────────────────────────────────

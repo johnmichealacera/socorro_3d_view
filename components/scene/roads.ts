@@ -71,6 +71,18 @@ export const OSM_ROADS: RoadData[] = [
     type: "residential", name: "Hospital Road", width: 0.18,
     pts: [[-22,-12],[-27,-12],[-31,-12],[-35,-12]],
   },
+
+  // ── 8. Main road spur → National High School (8,22) ──────────────────────
+  {
+    type: "residential", name: "High School Road", width: 0.18,
+    pts: [[11,12],[10,17],[8,22]],
+  },
+
+  // ── 9. High School (8,22) → Taruc Pool (16,34) → Puyangi Beach (28,44) ──
+  {
+    type: "tertiary", name: "Beach Road", width: 0.22,
+    pts: [[8,22],[12,28],[16,34],[22,40],[28,44]],
+  },
 ];
 
 // ─── Materials ────────────────────────────────────────────────────────────────
@@ -194,7 +206,6 @@ function buildCentreLineGeo(
   const indices: number[] = [];
   let base = 0;
 
-  let acc = 0;      // distance along road
   let inDash = true;
   let dashRemain = dashLen;
 
@@ -231,7 +242,6 @@ function buildCentreLineGeo(
 
       t += step;
       dashRemain -= step;
-      acc += step;
 
       if (dashRemain <= 0.001) {
         inDash = !inDash;

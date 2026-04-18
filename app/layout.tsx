@@ -5,6 +5,12 @@ export const metadata: Metadata = {
   title: "Socorro 3D Interactive Map",
   description:
     "3D interactive island viewer for Socorro, Surigao del Norte, Philippines",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

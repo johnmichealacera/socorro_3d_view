@@ -144,6 +144,26 @@ export const LOCATIONS: LocationData[] = [
     color: "#78350F",
     accentColor: "#D97706",
   },
+  {
+    id: "taruc-pool",
+    name: "Taruc Swimming Pool",
+    description:
+      "A popular public swimming pool facility in Socorro, located along the road toward Puyangi Beach. The Taruc Swimming Pool serves as a recreational hub for families and youth, offering a refreshing escape from the tropical heat.",
+    category: "recreation",
+    position: [16, 0, 34],
+    color: "#0EA5E9",
+    accentColor: "#7DD3FC",
+  },
+  {
+    id: "puyangi-beach",
+    name: "Puyangi White Beach",
+    description:
+      "The crown jewel of Socorro's tourism, Puyangi White Beach boasts pristine white sand and crystal-clear waters. A beloved beach resort destination on Bucas Grande Island, it attracts visitors from across Surigao del Norte and beyond.",
+    category: "beach",
+    position: [28, 0, 44],
+    color: "#F59E0B",
+    accentColor: "#FDE68A",
+  },
 ];
 
 export const CATEGORY_ICONS: Record<LocationData["category"], string> = {
@@ -155,6 +175,8 @@ export const CATEGORY_ICONS: Record<LocationData["category"], string> = {
   plaza: "🌳",
   hospital: "🏥",
   commercial: "🏬",
+  recreation: "🏊",
+  beach: "🏖️",
 };
 
 export const CATEGORY_LABELS: Record<LocationData["category"], string> = {
@@ -166,4 +188,6 @@ export const CATEGORY_LABELS: Record<LocationData["category"], string> = {
   plaza: "Public Space",
   hospital: "Health Services",
   commercial: "Commercial",
+  recreation: "Recreation",
+  beach: "Beach & Tourism",
 };
