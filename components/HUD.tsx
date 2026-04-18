@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { LOCATIONS, CATEGORY_ICONS } from "./scene/locations";
 import { LocationData } from "./scene/types";
 
@@ -41,13 +42,14 @@ export default function HUD({ selectedId, onLocationSelect }: HUDProps) {
           <span
             style={{
               fontSize: "0.62rem",
-              fontWeight: 600,
-              letterSpacing: "0.1em",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
               textTransform: "uppercase",
-              color: "#5888aa",
-              padding: "2px 6px",
-              border: "1px solid #2a4a66",
+              color: "#38bdf8",
+              padding: "2px 7px",
+              border: "1px solid rgba(56,189,248,0.55)",
               borderRadius: "4px",
+              background: "rgba(56,189,248,0.12)",
             }}
           >
             LIVE VIEW
@@ -67,10 +69,16 @@ export default function HUD({ selectedId, onLocationSelect }: HUDProps) {
           transform: "translateY(-50%)",
           display: "flex",
           flexDirection: "column",
-          gap: "5px",
+          gap: "3px",
           zIndex: 50,
           fontFamily: "-apple-system, 'Segoe UI', sans-serif",
-        }}
+          maxHeight: "calc(100vh - 7rem)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          paddingRight: "4px",
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(56,189,248,0.3) transparent",
+        } as React.CSSProperties}
       >
         {LOCATIONS.map((loc: LocationData) => {
           const active = selectedId === loc.id;
@@ -83,7 +91,7 @@ export default function HUD({ selectedId, onLocationSelect }: HUDProps) {
                 display: "flex",
                 alignItems: "center",
                 gap: "7px",
-                padding: "6px 10px 6px 8px",
+                padding: "4px 10px 4px 7px",
                 background: active
                   ? `linear-gradient(90deg, ${loc.color}cc, ${loc.color}88)`
                   : "rgba(4,10,22,0.72)",

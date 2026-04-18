@@ -72,6 +72,39 @@ export const OSM_ROADS: RoadData[] = [
     pts: [[-22,-12],[-27,-12],[-31,-12],[-35,-12]],
   },
 
+  // ── 8a. Market (15,6) → Beach Road junction (12,28) ─────────────────────
+  //     South road passing between Crispy King (18,9) and C&R Mall (12,12),
+  //     continues past Snackan ni Yojan (17,29) to the beach road
+  {
+    type: "tertiary", name: "South Road", width: 0.22,
+    pts: [[15,6],[15,10],[15,15],[14,22],[12,62]],
+  },
+
+  {
+    type: "tertiary", name: "South Road to Puyangi Beach", width: 0.22,
+    pts: [[12,62],[16,62],[20,62],[24,62],[28,62]],
+  },
+
+  {
+    type: "tertiary", name: "South Road to Taruc Pool", width: 0.22,
+    pts: [[-5,40],[16,40],[20,40],[24,40]],
+  },
+
+  {
+    type: "tertiary", name: "South Road to BGFC", width: 0.22,
+    pts: [[0,16],[4,16],[8,16],[12,16]],
+  },
+
+  {
+    type: "tertiary", name: "South Road to National High School", width: 0.22,
+    pts: [[-4,24],[0,24],[4,24],[8,24]],
+  },
+
+  {
+    type: "tertiary", name: "Palawan Pawnshop to Soemco", width: 0.22,
+    pts: [[-9,2],[13,2],[17,2],[21,2]],
+  },
+
   // ── 8. Main road spur → National High School (8,22) ──────────────────────
   {
     type: "residential", name: "High School Road", width: 0.18,

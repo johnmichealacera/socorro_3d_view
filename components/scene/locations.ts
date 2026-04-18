@@ -65,6 +65,46 @@ export const LOCATIONS: LocationData[] = [
     accentColor: "#FDE047",
   },
   {
+    id: "plaza-store-1",
+    name: "Sari-Sari Store 1",
+    description:
+      "A small variety store along the road across from the Poblacion Town Plaza. Sells snacks, drinks, and everyday household essentials for residents of the municipal proper.",
+    category: "commercial",
+    position: [0, 0, -1],
+    color: "#BE185D",
+    accentColor: "#FBCFE8",
+  },
+  {
+    id: "plaza-store-2",
+    name: "Sari-Sari Store 2",
+    description:
+      "A small variety store along the road across from the Poblacion Town Plaza. A convenient stop for residents and plaza visitors needing everyday goods.",
+    category: "commercial",
+    position: [5, 0, -1],
+    color: "#9D174D",
+    accentColor: "#F9A8D4",
+  },
+  {
+    id: "plaza-carinderia-1",
+    name: "Carinderia 1",
+    description:
+      "A local eatery (carinderia) across from the Poblacion Town Plaza offering affordable Filipino home-cooked meals. A popular lunch spot for municipal workers and plaza visitors.",
+    category: "commercial",
+    position: [1, 0, 1],
+    color: "#B45309",
+    accentColor: "#FCD34D",
+  },
+  {
+    id: "plaza-carinderia-2",
+    name: "Carinderia 2",
+    description:
+      "A local eatery (carinderia) across from the Poblacion Town Plaza serving daily specials of Filipino dishes. A go-to spot for a quick and filling meal in the heart of Socorro.",
+    category: "commercial",
+    position: [5, 0, 1],
+    color: "#92400E",
+    accentColor: "#FDE68A",
+  },
+  {
     id: "port",
     name: "Socorro Port & Pier",
     description:
@@ -90,7 +130,7 @@ export const LOCATIONS: LocationData[] = [
     description:
       "The national high school of Socorro offering secondary education. Its campus serves students from all barangays of the municipality who commute or board nearby.",
     category: "school",
-    position: [8, 0, 22],
+    position: [-4, 0, 24],
     color: "#10B981",
     accentColor: "#6EE7B7",
   },
@@ -145,12 +185,92 @@ export const LOCATIONS: LocationData[] = [
     accentColor: "#D97706",
   },
   {
+    id: "crispy-king",
+    name: "Crispy King",
+    description:
+      "A popular local fried chicken and fast food restaurant in Socorro's poblacion, located just south of the Public Market. A favorite stop for residents and visitors craving crispy chicken and affordable meals.",
+    category: "commercial",
+    position: [17, 0, 9],
+    color: "#DC2626",
+    accentColor: "#FCA5A5",
+  },
+  {
+    id: "guils-pharmacy",
+    name: "Guil's Pharmacy",
+    description:
+      "A local pharmacy behind C&R Mall serving Socorro's poblacion. Guil's Pharmacy provides prescription medicines, over-the-counter drugs, and basic health supplies to the community.",
+    category: "commercial",
+    position: [10, 0, 11],
+    color: "#0891B2",
+    accentColor: "#67E8F9",
+  },
+  {
+    id: "cr-mall",
+    name: "C&R Mall",
+    description:
+      "A small general merchandise store in Socorro's commercial strip, situated across the road from Crispy King. C&R Mall offers everyday goods, clothing, and household supplies to the local community.",
+    category: "commercial",
+    position: [12, 0, 8],
+    color: "#059669",
+    accentColor: "#6EE7B7",
+  },
+  {
+    id: "snackan-ni-yojan",
+    name: "Snackan ni Yojan",
+    description:
+      "A beloved local snack stop along the road to Puyangi Beach, run by Yojan. A go-to spot for freshly made local snacks and refreshments for beachgoers and Taruc Pool visitors passing through.",
+    category: "commercial",
+    position: [12, 0, 18],
+    color: "#D97706",
+    accentColor: "#FDE68A",
+  },
+  {
+    id: "sonya-store",
+    name: "Sonya Store",
+    description:
+      "A local general merchandise store in Socorro's poblacion, conveniently located just before J&T Express. Sonya Store serves the community with everyday goods and supplies.",
+    category: "commercial",
+    position: [4, 0, 12],
+    color: "#A21CAF",
+    accentColor: "#E879F9",
+  },
+  {
+    id: "jnt",
+    name: "J&T Express",
+    description:
+      "A J&T Express courier and delivery hub serving Socorro and Bucas Grande Island. Residents rely on this branch for sending and receiving parcels, packages, and online shopping deliveries across the Philippines.",
+    category: "commercial",
+    position: [0, 0, 13],
+    color: "#F97316",
+    accentColor: "#FDBA74",
+  },
+  {
+    id: "bgfc",
+    name: "Bucas Grande Foundation College",
+    description:
+      "A local private college serving the higher education needs of Socorro and the surrounding barangays of Bucas Grande Island. Bucas Grande Foundation College offers undergraduate programs for youth seeking quality education without leaving the island.",
+    category: "school",
+    position: [0, 0, 16],
+    color: "#6366F1",
+    accentColor: "#A5B4FC",
+  },
+  {
+    id: "madhouse",
+    name: "Madhouse",
+    description:
+      "A popular local hangout spot in Socorro, located along the road toward Puyangi Beach just past Snackan ni Yojan. A go-to place for locals to unwind and socialize.",
+    category: "commercial",
+    position: [12, 0, 25],
+    color: "#7C3AED",
+    accentColor: "#C4B5FD",
+  },
+  {
     id: "taruc-pool",
     name: "Taruc Swimming Pool",
     description:
       "A popular public swimming pool facility in Socorro, located along the road toward Puyangi Beach. The Taruc Swimming Pool serves as a recreational hub for families and youth, offering a refreshing escape from the tropical heat.",
     category: "recreation",
-    position: [16, 0, 34],
+    position: [0, 0, 40],
     color: "#0EA5E9",
     accentColor: "#7DD3FC",
   },
@@ -160,7 +280,7 @@ export const LOCATIONS: LocationData[] = [
     description:
       "The crown jewel of Socorro's tourism, Puyangi White Beach boasts pristine white sand and crystal-clear waters. A beloved beach resort destination on Bucas Grande Island, it attracts visitors from across Surigao del Norte and beyond.",
     category: "beach",
-    position: [28, 0, 44],
+    position: [28, 0, 62],
     color: "#F59E0B",
     accentColor: "#FDE68A",
   },
