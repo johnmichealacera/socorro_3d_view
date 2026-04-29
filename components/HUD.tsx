@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { LOCATIONS, CATEGORY_ICONS } from "./scene/locations";
 import { LocationData } from "./scene/types";
 
@@ -9,7 +9,43 @@ interface HUDProps {
   onLocationSelect: (id: string) => void;
 }
 
+function usePHTClock() {
+  const [display, setDisplay] = useState({ time: "00:00:00", period: "NIGHT", dotColor: "#3050a0" });
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-PH", {
+        timeZone: "Asia/Manila",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      const h = parseInt(
+        now.toLocaleString("en-PH", { timeZone: "Asia/Manila", hour: "numeric", hour12: false })
+      );
+      const period =
+        h >= 5 && h < 12  ? "MORNING"
+        : h >= 12 && h < 17 ? "AFTERNOON"
+        : h >= 17 && h < 20 ? "EVENING"
+        : "NIGHT";
+      const dotColor =
+        h >= 6 && h < 17  ? "#ffd060"
+        : h >= 17 && h < 20 ? "#ff8040"
+        : "#3050a0";
+      setDisplay({ time, period, dotColor });
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return display;
+}
+
 export default function HUD({ selectedId, onLocationSelect }: HUDProps) {
+  const clock = usePHTClock();
   return (
     <>
       {/* ── Top gradient header ──────────────────────────────────────────── */}
@@ -181,6 +217,52 @@ export default function HUD({ selectedId, onLocationSelect }: HUDProps) {
             <span>{desc}</span>
           </div>
         ))}
+      </div>
+
+      {/* ── Philippines Time Clock ──────────────────────────────────────── */}
+      <div
+        style={{
+          position: "absolute",
+          top: "1rem",
+          right: "1.5rem",
+          background: "rgba(4,10,22,0.78)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: "10px",
+          padding: "8px 14px 7px",
+          zIndex: 50,
+          pointerEvents: "none",
+          fontFamily: "-apple-system, 'Segoe UI', sans-serif",
+          textAlign: "right",
+          minWidth: "130px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "7px", justifyContent: "flex-end" }}>
+          <span
+            style={{
+              width: "7px",
+              height: "7px",
+              borderRadius: "50%",
+              background: clock.dotColor,
+              boxShadow: `0 0 6px ${clock.dotColor}`,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontSize: "1.05rem",
+              fontWeight: 700,
+              color: "#f0f8ff",
+              letterSpacing: "0.05em",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {clock.time}
+          </span>
+        </div>
+        <div style={{ fontSize: "0.58rem", color: "#6888a8", letterSpacing: "0.10em", marginTop: "3px" }}>
+          {clock.period} · PHT (UTC+8)
+        </div>
       </div>
 
       {/* ── Compass rose ────────────────────────────────────────────────── */}

@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 
-// Disable SSR — Three.js needs the browser DOM
 const IslandViewer = dynamic(() => import("@/components/IslandViewer"), {
   ssr: false,
   loading: () => (
@@ -28,6 +27,13 @@ const IslandViewer = dynamic(() => import("@/components/IslandViewer"), {
   ),
 });
 
+const SoundSystem = dynamic(() => import("@/components/SoundSystem"), { ssr: false });
+
 export default function Page() {
-  return <IslandViewer />;
+  return (
+    <>
+      <IslandViewer />
+      <SoundSystem />
+    </>
+  );
 }

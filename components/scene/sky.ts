@@ -16,25 +16,23 @@ export function createSky(scene: THREE.Scene, renderer: THREE.WebGLRenderer): Sk
   scene.add(sky);
 
   const u = sky.material.uniforms;
-  u["turbidity"].value = 0;          // zero atmospheric haze
-  u["rayleigh"].value = 0.2;         // minimal scatter — crisp horizon, no horizon glow
-  u["mieCoefficient"].value = 0.0;   // no Mie scatter whitening
+  u["turbidity"].value       = 0;
+  u["rayleigh"].value        = 0.2;
+  u["mieCoefficient"].value  = 0.0;
   u["mieDirectionalG"].value = 0.9;
 
   // Sun angle: azimuth ≈ 210° (south-southwest), elevation ≈ 62°
-  const phi   = THREE.MathUtils.degToRad(90 - 62);  // from zenith
-  const theta = THREE.MathUtils.degToRad(210);        // azimuth
+  const phi   = THREE.MathUtils.degToRad(90 - 62);
+  const theta = THREE.MathUtils.degToRad(210);
 
   const sunDirection = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
   u["sunPosition"].value.copy(sunDirection);
 
-  // Bake sky to environment cube so PBR materials get sky reflections
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-
-  // Use the sky as scene background
+  // Use the Sky shader as the scene background (natural atmospheric gradient)
   scene.background = sky as unknown as THREE.Texture;
 
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
   pmrem.dispose();
 
   return { sky, sunDirection };

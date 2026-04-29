@@ -82,6 +82,37 @@ export function buildingCameraTarget(
   };
 }
 
+// ─── Cinematic intro ──────────────────────────────────────────────────────────
+
+const INTRO_DURATION = 7.0; // seconds
+const _INTRO_START    = new THREE.Vector3(8,  90,  8);   // top-down over the town centre
+const _INTRO_END      = new THREE.Vector3(-25, 55, 65);  // normal starting view
+const _INTRO_LOOK     = new THREE.Vector3(3,  0,   5);   // fixed look-at throughout
+const _introLookTmp   = new THREE.Vector3();
+
+/**
+ * Runs during the first INTRO_DURATION seconds.
+ * Explicitly calls camera.lookAt() every frame so the camera is always oriented.
+ * Returns true when complete.
+ */
+export function runIntroCamera(
+  camera:   THREE.PerspectiveCamera,
+  controls: { target: THREE.Vector3 },
+  elapsed:  number
+): boolean {
+  if (elapsed >= INTRO_DURATION) return true;
+
+  const t    = elapsed / INTRO_DURATION;
+  const ease = 1 - Math.pow(1 - t, 2.5); // power ease-out
+
+  camera.position.lerpVectors(_INTRO_START, _INTRO_END, ease);
+  _introLookTmp.copy(_INTRO_LOOK);
+  controls.target.copy(_introLookTmp);
+  camera.lookAt(_introLookTmp); // ← must be explicit; controls.update() isn't called during intro
+
+  return false;
+}
+
 export function animateCameraTo(
   camera: THREE.PerspectiveCamera,
   controls: { target: THREE.Vector3 },

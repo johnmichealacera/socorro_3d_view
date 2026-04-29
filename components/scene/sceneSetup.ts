@@ -2,7 +2,8 @@ import * as THREE from "three";
 
 export function createScene(): THREE.Scene {
   const scene = new THREE.Scene();
-  // No scene fog — aerial view must be clear. Sky shader provides atmospheric depth.
+  // No scene fog — FogExp2 covers the world at aerial zoom-out distances.
+  // The Sky shader's Rayleigh scattering provides atmospheric horizon haze instead.
   scene.fog = null;
   return scene;
 }

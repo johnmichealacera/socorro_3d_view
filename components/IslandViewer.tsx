@@ -27,6 +27,12 @@ import {
 } from "./scene/animation";
 import { createNPCs, updateNPCs, disposeNPCs, type NPCData } from "./scene/npcs";
 import { createBoats, updateBoats, disposeBoats, type BoatData } from "./scene/boats";
+import { createBirds, updateBirds, disposeBirds, type BirdData } from "./scene/birds";
+import { createVehicles, updateVehicles, disposeVehicles, type VehicleData } from "./scene/vehicles";
+import { createClouds, updateClouds, disposeClouds, type CloudSprite } from "./scene/clouds";
+import { updateDayCycle } from "./scene/dayCycle";
+import { runIntroCamera } from "./scene/animation";
+import { Sky } from "three/addons/objects/Sky.js";
 
 import { LOCATIONS } from "./scene/locations";
 import { LocationData, BuildingGroup } from "./scene/types";
@@ -44,6 +50,13 @@ export default function IslandViewer() {
   const waterRef    = useRef<WaterMesh | null>(null);
   const npcsRef     = useRef<NPCData[]>([]);
   const boatsRef    = useRef<BoatData[]>([]);
+  const birdsRef    = useRef<BirdData[]>([]);
+  const vehiclesRef = useRef<VehicleData[]>([]);
+  const cloudsRef   = useRef<CloudSprite[]>([]);
+  const skyRef      = useRef<Sky | null>(null);
+  const sunRef      = useRef<THREE.DirectionalLight | null>(null);
+  const hemiRef     = useRef<THREE.HemisphereLight | null>(null);
+  const introRef    = useRef(false); // true once intro completes
   const rafRef      = useRef<number>(0);
 
   const hoveredIdRef  = useRef<string | null>(null);
@@ -96,13 +109,14 @@ export default function IslandViewer() {
     rendererRef.current = renderer;
 
     // Sky — sets scene.background and returns sun direction
-    const { sunDirection } = createSky(scene, renderer);
+    const { sky, sunDirection } = createSky(scene, renderer);
+    skyRef.current = sky;
 
-    // Lights — match sky sun
-    const { sun } = createLights(scene);
-    sun.position
-      .copy(sunDirection)
-      .multiplyScalar(120);
+    // Lights — match sky sun; store refs for day cycle
+    const { sun, hemisphere } = createLights(scene);
+    sunRef.current  = sun;
+    hemiRef.current = hemisphere;
+    sun.position.copy(sunDirection).multiplyScalar(120);
 
     // Terrain
     const terrain = createTerrain(scene);
@@ -126,6 +140,11 @@ export default function IslandViewer() {
 
     // Vegetation
     createVegetation(scene);
+
+    // Ambient life systems
+    birdsRef.current    = createBirds(scene);
+    vehiclesRef.current = createVehicles(scene);
+    cloudsRef.current   = createClouds(scene);
 
     // CSS2D labels — attached to building groups
     const labelRenderer = createLabelRenderer();
@@ -220,6 +239,11 @@ export default function IslandViewer() {
       const delta = Math.min(t - prevT, 0.05); // cap at 50 ms to avoid large jumps
       prevT = t;
 
+      // Day/night cycle — sky, lights
+      if (skyRef.current && sunRef.current && hemiRef.current) {
+        updateDayCycle(t, skyRef.current, sunRef.current, hemiRef.current, scene);
+      }
+
       // Water
       if (waterRef.current) {
         updateWater(waterRef.current, t, camera.position);
@@ -230,6 +254,11 @@ export default function IslandViewer() {
 
       // Boats
       updateBoats(boatsRef.current, t);
+
+      // Birds, vehicles, clouds
+      updateBirds(birdsRef.current, t, delta);
+      updateVehicles(vehiclesRef.current, delta);
+      updateClouds(cloudsRef.current, t, delta);
 
       // Hover detection
       raycaster.current.setFromCamera(mouse.current, camera);
@@ -251,12 +280,18 @@ export default function IslandViewer() {
       // Building animations
       animateBuildings(buildingsRef.current, t, hoveredIdRef.current, selectedIdRef.current);
 
-      // Camera fly-to
-      if (camTargetRef.current) {
-        animateCameraTo(camera, controls, camTargetRef.current);
+      // Cinematic intro — block user input and drive camera manually
+      if (!introRef.current) {
+        controls.enabled = false;
+        const done = runIntroCamera(camera, controls, t);
+        if (done) { introRef.current = true; controls.enabled = true; }
+      } else {
+        // Camera fly-to (only active after intro)
+        if (camTargetRef.current) {
+          animateCameraTo(camera, controls, camTargetRef.current);
+        }
+        controls.update();
       }
-
-      controls.update();
 
       // Labels (CSS2D) always face camera
       labelRenderer.render(scene, camera);
@@ -273,6 +308,9 @@ export default function IslandViewer() {
       canvas.removeEventListener("click", onClick);
       disposeNPCs(npcsRef.current);
       disposeBoats(boatsRef.current);
+      disposeBirds(birdsRef.current);
+      disposeVehicles(vehiclesRef.current);
+      disposeClouds(cloudsRef.current);
       controls.dispose();
       composer.dispose();
       renderer.dispose();
