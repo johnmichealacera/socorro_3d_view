@@ -147,8 +147,42 @@ export function createVehicles(scene: THREE.Scene): VehicleData[] {
   return vehicles;
 }
 
+// ── PHT schedule ──────────────────────────────────────────────────────────────
+// Tricycles operate 06:00–22:00 PHT; off the rest of the night.
+
+function vehicleScheduleTarget(): number {
+  const now  = new Date();
+  const phtH = (now.getUTCHours() + 8) % 24;
+  const phtM = now.getUTCMinutes();
+  const hm   = phtH + phtM / 60;
+
+  if (hm < 5.5  || hm >= 22.0) return 0;
+  if (hm >= 5.5  && hm <  6.5) return hm - 5.5;      // ramp in at dawn
+  if (hm >= 21.0 && hm < 22.0) return 1.0 - (hm - 21.0); // ramp out late night
+  return 1.0;
+}
+
+let _vCheckAt   = 0;
+let _vIntensity = vehicleScheduleTarget(); // initialize to real PHT
+
 export function updateVehicles(vehicles: VehicleData[], delta: number): void {
+  if (delta === 0) return;
+
+  // Throttle PHT check to every 2 seconds
+  // We use a rough clock since we don't pass t here; use Date.now() ms
+  const now = performance.now() / 1000;
+  if (now - _vCheckAt > 2.0) {
+    _vCheckAt = now;
+    const target = vehicleScheduleTarget();
+    _vIntensity += (target - _vIntensity) * 0.05;
+  }
+
+  const active = _vIntensity > 0.05;
+
   for (const v of vehicles) {
+    v.mesh.visible = active;
+    if (!active) continue;
+
     v.t += v.direction * v.speed * delta / v.totalLength;
     if (v.t >= 1.0) { v.t = 1.0; v.direction = -1; }
     if (v.t <= 0.0) { v.t = 0.0; v.direction =  1; }
@@ -157,19 +191,14 @@ export function updateVehicles(vehicles: VehicleData[], delta: number): void {
     const y = Math.max(0.01, terrainHeight(x, z));
     v.mesh.position.set(x, y + 0.015, z);
 
-    // Face direction of travel
     if (Math.abs(dx) + Math.abs(dz) > 0.001) {
       const fx = v.direction > 0 ? dx : -dx;
       const fz = v.direction > 0 ? dz : -dz;
       v.mesh.rotation.y = Math.atan2(fx, fz);
     }
 
-    // Spin wheels (rotation.z accumulates because wheel cylinder axis is now X after z-rotation)
     v.wheelAngle += v.speed * delta * 4.0;
     for (const w of v.wheels) {
-      // The wheel was initially rotated z=PI/2. We want the circular rolling to happen
-      // around that same axis, which in the rotated frame is the local X axis.
-      // Three.js applies Euler in XYZ order, so we just set x on top of the z rotation.
       w.rotation.x = v.wheelAngle;
     }
   }

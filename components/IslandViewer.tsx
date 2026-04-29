@@ -37,6 +37,9 @@ import { updateDayCycle } from "./scene/dayCycle";
 import { runIntroCamera } from "./scene/animation";
 import { Sky } from "three/addons/objects/Sky.js";
 import { WEATHER, applyWeatherFrame, type WeatherPreset } from "./scene/weather";
+import { createStreetLamps, updateStreetLamps, disposeStreetLamps, type LampSystem } from "./scene/streetLamps";
+import { createLandmarkLights, updateLandmarkLights, disposeLandmarkLights, type LandmarkLightSystem } from "./scene/landmarkLights";
+import { createCelestials, updateCelestials, disposeCelestials, type CelestialsSystem } from "./scene/celestials";
 
 import { LOCATIONS } from "./scene/locations";
 import { LocationData, BuildingGroup } from "./scene/types";
@@ -62,6 +65,9 @@ export default function IslandViewer() {
   const firefliesRef  = useRef<FireflyData[]>([]);
   const discoveryRef  = useRef<DiscoveryObject[]>([]);
   const rainRef       = useRef<RainSystem | null>(null);
+  const lampsRef         = useRef<LampSystem | null>(null);
+  const landmarkLightsRef = useRef<LandmarkLightSystem | null>(null);
+  const celestialsRef     = useRef<CelestialsSystem | null>(null);
   const weatherRef    = useRef<WeatherPreset>("sunny");
   const skyRef      = useRef<Sky | null>(null);
   const sunRef      = useRef<THREE.DirectionalLight | null>(null);
@@ -172,6 +178,9 @@ export default function IslandViewer() {
     firefliesRef.current = createFireflies(scene);
     discoveryRef.current = createDiscoveries(scene);
     rainRef.current      = createRain(scene);
+    lampsRef.current          = createStreetLamps(scene);
+    landmarkLightsRef.current = createLandmarkLights(scene, buildings);
+    celestialsRef.current     = createCelestials(scene);
 
     // CSS2D labels — attached to building groups
     const labelRenderer = createLabelRenderer();
@@ -304,6 +313,9 @@ export default function IslandViewer() {
       updateFireflies(firefliesRef.current, t, delta);
       updateDiscoveries(discoveryRef.current, t, null);
       if (rainRef.current) updateRain(rainRef.current, delta, camera.position);
+      if (lampsRef.current) updateStreetLamps(lampsRef.current, t, delta);
+      if (landmarkLightsRef.current) updateLandmarkLights(landmarkLightsRef.current, t, delta, wCfg.sunMult);
+      if (celestialsRef.current) updateCelestials(celestialsRef.current, t);
 
       // Hover detection
       raycaster.current.setFromCamera(mouse.current, camera);
@@ -359,6 +371,9 @@ export default function IslandViewer() {
       disposeFireflies(firefliesRef.current);
       disposeDiscoveries(discoveryRef.current);
       if (rainRef.current) disposeRain(rainRef.current);
+      if (lampsRef.current) disposeStreetLamps(lampsRef.current);
+      if (landmarkLightsRef.current) disposeLandmarkLights(landmarkLightsRef.current);
+      if (celestialsRef.current) disposeCelestials(celestialsRef.current);
       controls.dispose();
       composer.dispose();
       renderer.dispose();

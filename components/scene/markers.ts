@@ -29,8 +29,10 @@ const M = {
   metalRoofRust:mat(0x8a5038, 0.50, 0.60),
   metalRoofGreen:mat(0x4a6840, 0.48, 0.62),
   metalRoofRed: mat(0x7a3828, 0.50, 0.60),
-  glass:        mat(0x3a6898, 0.08, 0.85, { transparent: true, opacity: 0.72 }),
-  glassDark:    mat(0x1a3060, 0.06, 0.90, { transparent: true, opacity: 0.60 }),
+  glass:        mat(0x3a6898, 0.08, 0.85, { transparent: true, opacity: 0.72,
+                    emissive: new THREE.Color(0xf0f8ff), emissiveIntensity: 0 }),
+  glassDark:    mat(0x1a3060, 0.06, 0.90, { transparent: true, opacity: 0.60,
+                    emissive: new THREE.Color(0xe8f4ff), emissiveIntensity: 0 }),
   woodBeam:     mat(0x6e4830, 0.95),
   concreteGray: mat(0x909090, 0.86),
   asphalt:      mat(0x484848, 0.95),
@@ -1058,3 +1060,6 @@ export function createBuildings(
     return group;
   });
 }
+
+// Exported so landmarkLights.ts can animate emissive intensity on all windows
+export const GLASS_MATS: THREE.MeshStandardMaterial[] = [M.glass, M.glassDark];
