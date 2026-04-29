@@ -30,13 +30,19 @@ import { createBoats, updateBoats, disposeBoats, type BoatData } from "./scene/b
 import { createBirds, updateBirds, disposeBirds, type BirdData } from "./scene/birds";
 import { createVehicles, updateVehicles, disposeVehicles, type VehicleData } from "./scene/vehicles";
 import { createClouds, updateClouds, disposeClouds, type CloudSprite } from "./scene/clouds";
+import { createFireflies, updateFireflies, disposeFireflies, type FireflyData } from "./scene/fireflies";
+import { createDiscoveries, updateDiscoveries, disposeDiscoveries, type DiscoveryObject } from "./scene/discovery";
+import { createRain, updateRain, setRaining, disposeRain, type RainSystem } from "./scene/rain";
 import { updateDayCycle } from "./scene/dayCycle";
 import { runIntroCamera } from "./scene/animation";
 import { Sky } from "three/addons/objects/Sky.js";
+import { WEATHER, applyWeatherFrame, type WeatherPreset } from "./scene/weather";
 
 import { LOCATIONS } from "./scene/locations";
 import { LocationData, BuildingGroup } from "./scene/types";
+import { type DiscoveryDef } from "./scene/discovery";
 import InfoPanel from "./InfoPanel";
+import DiscoveryPopup from "./DiscoveryPopup";
 import HUD from "./HUD";
 
 export default function IslandViewer() {
@@ -52,7 +58,11 @@ export default function IslandViewer() {
   const boatsRef    = useRef<BoatData[]>([]);
   const birdsRef    = useRef<BirdData[]>([]);
   const vehiclesRef = useRef<VehicleData[]>([]);
-  const cloudsRef   = useRef<CloudSprite[]>([]);
+  const cloudsRef     = useRef<CloudSprite[]>([]);
+  const firefliesRef  = useRef<FireflyData[]>([]);
+  const discoveryRef  = useRef<DiscoveryObject[]>([]);
+  const rainRef       = useRef<RainSystem | null>(null);
+  const weatherRef    = useRef<WeatherPreset>("sunny");
   const skyRef      = useRef<Sky | null>(null);
   const sunRef      = useRef<THREE.DirectionalLight | null>(null);
   const hemiRef     = useRef<THREE.HemisphereLight | null>(null);
@@ -65,8 +75,10 @@ export default function IslandViewer() {
   const raycaster     = useRef(new THREE.Raycaster());
   const mouse         = useRef(new THREE.Vector2(-9999, -9999));
 
-  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
-  const [selectedId, setSelectedId]             = useState<string | null>(null);
+  const [selectedLocation,  setSelectedLocation]  = useState<LocationData | null>(null);
+  const [selectedId,        setSelectedId]         = useState<string | null>(null);
+  const [selectedDiscovery, setSelectedDiscovery]  = useState<DiscoveryDef | null>(null);
+  const [weather,           setWeather]            = useState<WeatherPreset>("sunny");
 
   // Keep ref in sync
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
@@ -92,6 +104,16 @@ export default function IslandViewer() {
     setSelectedLocation(null);
     setSelectedId(null);
     camTargetRef.current = null;
+  }, []);
+
+  const changeWeather = useCallback((w: WeatherPreset) => {
+    weatherRef.current = w;
+    setWeather(w);
+    const cfg = WEATHER[w];
+    if (rainRef.current) setRaining(rainRef.current, cfg.raining);
+    window.dispatchEvent(new CustomEvent("socorro:weather", {
+      detail: { raining: cfg.raining },
+    }));
   }, []);
 
   // ── Scene bootstrap ───────────────────────────────────────────────────────────
@@ -145,6 +167,11 @@ export default function IslandViewer() {
     birdsRef.current    = createBirds(scene);
     vehiclesRef.current = createVehicles(scene);
     cloudsRef.current   = createClouds(scene);
+
+    // Phase 2 systems
+    firefliesRef.current = createFireflies(scene);
+    discoveryRef.current = createDiscoveries(scene);
+    rainRef.current      = createRain(scene);
 
     // CSS2D labels — attached to building groups
     const labelRenderer = createLabelRenderer();
@@ -203,9 +230,18 @@ export default function IslandViewer() {
     };
     window.addEventListener("mousemove", onMouseMove);
 
-    // ── Click (select building) ───────────────────────────────────────────
+    // ── Click (select building or discovery) ─────────────────────────────
     const onClick = () => {
       raycaster.current.setFromCamera(mouse.current, camera);
+
+      // Discovery objects take priority
+      const discMeshes = discoveryRef.current.map(o => o.orb);
+      const dHits = raycaster.current.intersectObjects(discMeshes, false);
+      if (dHits.length > 0) {
+        const id  = dHits[0].object.userData.discoveryId as string;
+        const obj = discoveryRef.current.find(o => o.def.id === id);
+        if (obj) { setSelectedDiscovery(obj.def); return; }
+      }
 
       // Collect all meshes inside building groups
       const buildingMeshes: THREE.Object3D[] = [];
@@ -239,9 +275,12 @@ export default function IslandViewer() {
       const delta = Math.min(t - prevT, 0.05); // cap at 50 ms to avoid large jumps
       prevT = t;
 
-      // Day/night cycle — sky, lights
+      // Day/night cycle — sky, lights (sets base intensities / fog colour)
       if (skyRef.current && sunRef.current && hemiRef.current) {
         updateDayCycle(t, skyRef.current, sunRef.current, hemiRef.current, scene);
+        // Apply weather multipliers on top of day cycle values
+        const wCfg = WEATHER[weatherRef.current];
+        applyWeatherFrame(wCfg, scene, sunRef.current, hemiRef.current, renderer);
       }
 
       // Water
@@ -256,9 +295,15 @@ export default function IslandViewer() {
       updateBoats(boatsRef.current, t);
 
       // Birds, vehicles, clouds
+      const wCfg = WEATHER[weatherRef.current];
       updateBirds(birdsRef.current, t, delta);
       updateVehicles(vehiclesRef.current, delta);
-      updateClouds(cloudsRef.current, t, delta);
+      updateClouds(cloudsRef.current, t, delta, wCfg.cloudOpMult, wCfg.cloudSpMult);
+
+      // Phase 2
+      updateFireflies(firefliesRef.current, t, delta);
+      updateDiscoveries(discoveryRef.current, t, null);
+      if (rainRef.current) updateRain(rainRef.current, delta, camera.position);
 
       // Hover detection
       raycaster.current.setFromCamera(mouse.current, camera);
@@ -311,6 +356,9 @@ export default function IslandViewer() {
       disposeBirds(birdsRef.current);
       disposeVehicles(vehiclesRef.current);
       disposeClouds(cloudsRef.current);
+      disposeFireflies(firefliesRef.current);
+      disposeDiscoveries(discoveryRef.current);
+      if (rainRef.current) disposeRain(rainRef.current);
       controls.dispose();
       composer.dispose();
       renderer.dispose();
@@ -326,9 +374,19 @@ export default function IslandViewer() {
         style={{ display: "block", width: "100%", height: "100%" }}
       />
 
-      <HUD selectedId={selectedId} onLocationSelect={selectLocation} />
+      <HUD
+        selectedId={selectedId}
+        onLocationSelect={selectLocation}
+        weather={weather}
+        onWeatherChange={changeWeather}
+      />
 
       <InfoPanel location={selectedLocation} onClose={clearSelection} />
+
+      <DiscoveryPopup
+        discovery={selectedDiscovery}
+        onClose={() => setSelectedDiscovery(null)}
+      />
 
       <style>{`
         @keyframes panelIn {

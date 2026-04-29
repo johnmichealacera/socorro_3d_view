@@ -19,6 +19,7 @@ const SUNSET  = 18 / 24; // ~6:00 PM
 const _sunDir  = new THREE.Vector3();
 const _tmpCol  = new THREE.Color();
 const _tmpCol2 = new THREE.Color();
+const _tmpFog  = new THREE.Color();
 
 // ── Keyframe tables (phase = hour / 24) ──────────────────────────────────────
 
@@ -41,6 +42,20 @@ const LIGHT_KEYS: LightKey[] = [
   { t: 0.81, color: new THREE.Color(0x2040a0), intensity: 0.35, hemiSky: new THREE.Color(0x182848), hemiGnd: new THREE.Color(0x0c0618) }, //  7:26 PM twilight
   { t: 0.92, color: new THREE.Color(0x0a1840), intensity: 0.15, hemiSky: new THREE.Color(0x08101e), hemiGnd: new THREE.Color(0x04060c) }, // 10 PM night
   { t: 1.00, color: new THREE.Color(0x0a1840), intensity: 0.15, hemiSky: new THREE.Color(0x08101e), hemiGnd: new THREE.Color(0x04060c) }, // 12 AM midnight
+];
+
+interface FogKey { t: number; color: THREE.Color; }
+const FOG_KEYS: FogKey[] = [
+  { t: 0.00, color: new THREE.Color(0x0c1530) }, // midnight — dark navy
+  { t: 0.22, color: new THREE.Color(0x1a2848) }, // pre-dawn  — deep blue
+  { t: 0.25, color: new THREE.Color(0xff8050) }, // sunrise   — warm peach
+  { t: 0.33, color: new THREE.Color(0xd8cfc0) }, // morning   — pale haze
+  { t: 0.50, color: new THREE.Color(0xc2e8f8) }, // noon      — pale sky blue
+  { t: 0.67, color: new THREE.Color(0xe8b870) }, // golden    — warm amber
+  { t: 0.75, color: new THREE.Color(0xb04828) }, // sunset    — red-orange
+  { t: 0.81, color: new THREE.Color(0x2a3868) }, // twilight  — dark blue
+  { t: 0.92, color: new THREE.Color(0x0c1530) }, // night     — dark navy
+  { t: 1.00, color: new THREE.Color(0x0c1530) }, // midnight
 ];
 
 interface SkyKey { t: number; turbidity: number; rayleigh: number; }
@@ -74,7 +89,7 @@ export function updateDayCycle(
   sky:        Sky,
   sun:        THREE.DirectionalLight,
   hemisphere: THREE.HemisphereLight,
-  _scene:     THREE.Scene
+  scene:      THREE.Scene
 ): void {
   const phase = getPhilippinesPhase();
 
@@ -109,4 +124,10 @@ export function updateDayCycle(
   hemisphere.color.copy(_tmpCol.copy(la.hemiSky).lerp(lb.hemiSky, lalpha));
   hemisphere.groundColor.copy(_tmpCol2.copy(la.hemiGnd).lerp(lb.hemiGnd, lalpha));
   hemisphere.intensity = 0.55 + elevNorm * 0.45;
+
+  // Fog colour tracks the sky horizon so distant haze blends seamlessly
+  if (scene.fog instanceof THREE.Fog) {
+    const [fa, fb, falpha] = sampleT(FOG_KEYS, phase);
+    scene.fog.color.copy(_tmpFog.copy(fa.color).lerp(fb.color, falpha));
+  }
 }

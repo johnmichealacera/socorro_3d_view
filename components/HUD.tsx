@@ -3,10 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { LOCATIONS, CATEGORY_ICONS } from "./scene/locations";
 import { LocationData } from "./scene/types";
+import { WEATHER, WEATHER_ORDER, type WeatherPreset } from "./scene/weather";
 
 interface HUDProps {
-  selectedId: string | null;
+  selectedId:       string | null;
   onLocationSelect: (id: string) => void;
+  weather:          WeatherPreset;
+  onWeatherChange:  (w: WeatherPreset) => void;
 }
 
 function usePHTClock() {
@@ -44,7 +47,7 @@ function usePHTClock() {
   return display;
 }
 
-export default function HUD({ selectedId, onLocationSelect }: HUDProps) {
+export default function HUD({ selectedId, onLocationSelect, weather, onWeatherChange }: HUDProps) {
   const clock = usePHTClock();
   return (
     <>
@@ -219,49 +222,112 @@ export default function HUD({ selectedId, onLocationSelect }: HUDProps) {
         ))}
       </div>
 
-      {/* ── Philippines Time Clock ──────────────────────────────────────── */}
+      {/* ── Top-right: Weather selector + Clock ────────────────────────── */}
       <div
         style={{
-          position: "absolute",
-          top: "1rem",
-          right: "1.5rem",
-          background: "rgba(4,10,22,0.78)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          borderRadius: "10px",
-          padding: "8px 14px 7px",
-          zIndex: 50,
-          pointerEvents: "none",
+          position:   "absolute",
+          top:        "1rem",
+          right:      "1.5rem",
+          display:    "flex",
+          gap:        "8px",
+          alignItems: "flex-start",
+          zIndex:     50,
           fontFamily: "-apple-system, 'Segoe UI', sans-serif",
-          textAlign: "right",
-          minWidth: "130px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "7px", justifyContent: "flex-end" }}>
-          <span
-            style={{
-              width: "7px",
-              height: "7px",
-              borderRadius: "50%",
-              background: clock.dotColor,
-              boxShadow: `0 0 6px ${clock.dotColor}`,
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              fontSize: "1.05rem",
-              fontWeight: 700,
-              color: "#f0f8ff",
-              letterSpacing: "0.05em",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {clock.time}
-          </span>
+        {/* Weather simulator */}
+        <div
+          style={{
+            background:     "rgba(4,10,22,0.78)",
+            backdropFilter: "blur(12px)",
+            border:         "1px solid rgba(255,255,255,0.09)",
+            borderRadius:   "10px",
+            padding:        "7px 10px",
+            display:        "flex",
+            flexDirection:  "column",
+            gap:            "6px",
+          }}
+        >
+          <div style={{ fontSize: "0.52rem", color: "#6888a8", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+            Weather
+          </div>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {WEATHER_ORDER.map((preset) => {
+              const cfg    = WEATHER[preset];
+              const active = weather === preset;
+              return (
+                <button
+                  key={preset}
+                  title={cfg.label}
+                  onClick={() => onWeatherChange(preset)}
+                  style={{
+                    width:          "30px",
+                    height:         "30px",
+                    background:     active ? "rgba(56,189,248,0.18)" : "rgba(255,255,255,0.04)",
+                    border:         `1px solid ${active ? "rgba(56,189,248,0.55)" : "rgba(255,255,255,0.10)"}`,
+                    borderRadius:   "7px",
+                    fontSize:       "1.0rem",
+                    lineHeight:     1,
+                    cursor:         "pointer",
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "center",
+                    transition:     "all 0.15s",
+                    boxShadow:      active ? "0 0 8px rgba(56,189,248,0.25)" : "none",
+                    color:          active ? "#38bdf8" : "#8aaccc",
+                    fontFamily:     "inherit",
+                    padding:        0,
+                  }}
+                >
+                  {cfg.icon}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: "0.58rem", color: "#38bdf8", letterSpacing: "0.06em", textAlign: "center" }}>
+            {WEATHER[weather].label}
+          </div>
         </div>
-        <div style={{ fontSize: "0.58rem", color: "#6888a8", letterSpacing: "0.10em", marginTop: "3px" }}>
-          {clock.period} · PHT (UTC+8)
+
+        {/* PHT Clock */}
+        <div
+          style={{
+            background:     "rgba(4,10,22,0.78)",
+            backdropFilter: "blur(12px)",
+            border:         "1px solid rgba(255,255,255,0.09)",
+            borderRadius:   "10px",
+            padding:        "8px 14px 7px",
+            pointerEvents:  "none",
+            textAlign:      "right",
+            minWidth:       "130px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "7px", justifyContent: "flex-end" }}>
+            <span
+              style={{
+                width:      "7px",
+                height:     "7px",
+                borderRadius: "50%",
+                background: clock.dotColor,
+                boxShadow:  `0 0 6px ${clock.dotColor}`,
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize:          "1.05rem",
+                fontWeight:        700,
+                color:             "#f0f8ff",
+                letterSpacing:     "0.05em",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {clock.time}
+            </span>
+          </div>
+          <div style={{ fontSize: "0.58rem", color: "#6888a8", letterSpacing: "0.10em", marginTop: "3px" }}>
+            {clock.period} · PHT (UTC+8)
+          </div>
         </div>
       </div>
 

@@ -76,9 +76,21 @@ export function createClouds(scene: THREE.Scene): CloudSprite[] {
   return clouds;
 }
 
-export function updateClouds(clouds: CloudSprite[], t: number, delta: number): void {
-  for (const c of clouds) {
-    c.sprite.position.x -= c.speed * delta;
+export function updateClouds(
+  clouds:    CloudSprite[],
+  t:         number,
+  delta:     number,
+  opMult  = 1.0,
+  spdMult = 1.0,
+): void {
+  for (let i = 0; i < clouds.length; i++) {
+    const c   = clouds[i];
+    const mat = c.sprite.material as THREE.SpriteMaterial;
+    // Base opacity comes from DEFS index (same order)
+    const baseOp = DEFS[i][5];
+    mat.opacity = Math.min(1, baseOp * opMult);
+
+    c.sprite.position.x -= c.speed * spdMult * delta;
     if (c.sprite.position.x < -88) c.sprite.position.x = 88;
     c.sprite.position.y = c.baseY + Math.sin(t * 0.28 + c.phase) * 0.6;
   }

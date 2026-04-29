@@ -2,9 +2,9 @@ import * as THREE from "three";
 
 export function createScene(): THREE.Scene {
   const scene = new THREE.Scene();
-  // No scene fog — FogExp2 covers the world at aerial zoom-out distances.
-  // The Sky shader's Rayleigh scattering provides atmospheric horizon haze instead.
-  scene.fog = null;
+  // Linear fog — near=100 keeps aerial terrain clear (camera→terrain ≈85 units),
+  // far=260 fades the distant water horizon. Colour is updated per-frame by dayCycle.
+  scene.fog = new THREE.Fog(0xc2e8f8, 100, 260);
   return scene;
 }
 

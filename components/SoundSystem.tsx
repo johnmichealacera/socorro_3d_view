@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 export default function SoundSystem() {
   const [started, setStarted] = useState(false);
   const [muted,   setMuted]   = useState(false);
-  const ctxRef    = useRef<AudioContext | null>(null);
-  const masterRef = useRef<GainNode | null>(null);
-  const aliveRef  = useRef(true);
+  const ctxRef     = useRef<AudioContext | null>(null);
+  const masterRef  = useRef<GainNode | null>(null);
+  const rainGainRef = useRef<GainNode | null>(null);
+  const aliveRef   = useRef(true);
 
   useEffect(() => {
     if (!started) return;
@@ -139,15 +140,68 @@ export default function SoundSystem() {
       }, delay);
     }
 
+    // ── Rain: high-pass noise layer, triggered by socorro:weather event ─────────
+    function createRainLayer(): () => void {
+      const rate   = ctx.sampleRate;
+      const frames = rate * 3;
+      const buf    = ctx.createBuffer(1, frames, rate);
+      const d      = buf.getChannelData(0);
+      for (let i = 0; i < frames; i++) d[i] = Math.random() * 2 - 1;
+
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop   = true;
+
+      const hpf = ctx.createBiquadFilter();
+      hpf.type            = "highpass";
+      hpf.frequency.value = 1400;
+
+      const bpf = ctx.createBiquadFilter();
+      bpf.type            = "bandpass";
+      bpf.frequency.value = 3200;
+      bpf.Q.value         = 0.28;
+
+      const gain = ctx.createGain();
+      gain.gain.value = 0; // silent until rain starts
+      rainGainRef.current = gain;
+
+      src.connect(hpf);
+      hpf.connect(bpf);
+      bpf.connect(gain);
+      gain.connect(master);
+      src.start();
+
+      return () => {
+        try { src.stop(); } catch (_) { /* already stopped */ }
+        [src, hpf, bpf, gain].forEach(n => n.disconnect());
+        rainGainRef.current = null;
+      };
+    }
+
+    const handleWeather = (e: Event) => {
+      const { raining } = (e as CustomEvent<{ raining: boolean }>).detail;
+      if (rainGainRef.current && ctxRef.current) {
+        rainGainRef.current.gain.setTargetAtTime(
+          raining ? 0.20 : 0,
+          ctxRef.current.currentTime,
+          0.6
+        );
+      }
+    };
+    window.addEventListener("socorro:weather", handleWeather);
+
     const cleanOcean = createOcean();
     const cleanWind  = createWind();
+    const cleanRain  = createRainLayer();
     scheduleBird();
     scheduleBell();
 
     return () => {
       aliveRef.current = false;
+      window.removeEventListener("socorro:weather", handleWeather);
       cleanOcean();
       cleanWind();
+      cleanRain();
       ctx.close();
       ctxRef.current = null;
     };
