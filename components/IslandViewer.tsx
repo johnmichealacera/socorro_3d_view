@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 
 import { createScene, createCamera, createRenderer, createLights } from "./scene/sceneSetup";
 import { createSky } from "./scene/sky";
@@ -18,7 +17,7 @@ import {
   resizeLabelRenderer,
   attachLabel,
 } from "./scene/labels";
-import { createPostProcessing, resizeComposer } from "./scene/postprocessing";
+import { createPostProcessing, resizeComposer, BLOOM_LAYER, type PostProcessing } from "./scene/postprocessing";
 import {
   animateBuildings,
   buildingCameraTarget,
@@ -53,7 +52,7 @@ export default function IslandViewer() {
   const sceneRef    = useRef<THREE.Scene | null>(null);
   const cameraRef   = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const composerRef = useRef<EffectComposer | null>(null);
+  const ppRef = useRef<PostProcessing | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const buildingsRef= useRef<BuildingGroup[]>([]);
   const waterRef    = useRef<WaterMesh | null>(null);
@@ -194,9 +193,28 @@ export default function IslandViewer() {
       attachLabel(b, b.userData.location, h);
     }
 
-    // Post-processing
-    const composer = createPostProcessing(renderer, scene, camera);
-    composerRef.current = composer;
+    // Post-processing — selective bloom (sky background excluded via caller-side layer trick)
+    const pp = createPostProcessing(renderer, scene, camera);
+    ppRef.current = pp;
+
+    // Assign BLOOM_LAYER to emissive objects so only they receive bloom.
+    // The sky, terrain, buildings, roads, vehicles, NPCs stay on layer 0 only.
+    if (celestialsRef.current) {
+      celestialsRef.current.sunSprite.layers.enable(BLOOM_LAYER);
+      celestialsRef.current.moonSprite.layers.enable(BLOOM_LAYER);
+      celestialsRef.current.stars.layers.enable(BLOOM_LAYER);
+    }
+    for (const f of firefliesRef.current) {
+      f.sprite.layers.enable(BLOOM_LAYER);
+    }
+    if (landmarkLightsRef.current) {
+      for (const entry of landmarkLightsRef.current.entries) {
+        for (const halo of entry.halos) halo.layers.enable(BLOOM_LAYER);
+      }
+    }
+    if (lampsRef.current) {
+      for (const glow of lampsRef.current.glows) glow.layers.enable(BLOOM_LAYER);
+    }
 
     // OrbitControls — map-style: left-drag pans, right-drag orbits
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -226,9 +244,8 @@ export default function IslandViewer() {
       camera.aspect = W / H;
       camera.updateProjectionMatrix();
       renderer.setSize(W, H);
-      composer.setSize(W, H);
       resizeLabelRenderer(labelRenderer);
-      resizeComposer(composer, W, H);
+      if (ppRef.current) resizeComposer(ppRef.current, W, H);
     };
     window.addEventListener("resize", onResize);
 
@@ -284,17 +301,25 @@ export default function IslandViewer() {
       const delta = Math.min(t - prevT, 0.05); // cap at 50 ms to avoid large jumps
       prevT = t;
 
+      // Weather config available to all systems this frame
+      const wCfg = WEATHER[weatherRef.current];
+
       // Day/night cycle — sky, lights (sets base intensities / fog colour)
       if (skyRef.current && sunRef.current && hemiRef.current) {
         updateDayCycle(t, skyRef.current, sunRef.current, hemiRef.current, scene);
-        // Apply weather multipliers on top of day cycle values
-        const wCfg = WEATHER[weatherRef.current];
         applyWeatherFrame(wCfg, scene, sunRef.current, hemiRef.current, renderer);
       }
 
-      // Water
-      if (waterRef.current) {
-        updateWater(waterRef.current, t, camera.position);
+      // Water — pass current sky colours so reflections match time of day and weather
+      if (waterRef.current && sunRef.current && hemiRef.current) {
+        const fogColor = (scene.fog instanceof THREE.Fog) ? scene.fog.color : new THREE.Color(0xc2e8f8);
+        updateWater(
+          waterRef.current, t, camera.position,
+          sunRef.current.position,
+          fogColor,
+          hemiRef.current.color,
+          wCfg.waveMult,
+        );
       }
 
       // NPCs
@@ -304,7 +329,6 @@ export default function IslandViewer() {
       updateBoats(boatsRef.current, t);
 
       // Birds, vehicles, clouds
-      const wCfg = WEATHER[weatherRef.current];
       updateBirds(birdsRef.current, t, delta);
       updateVehicles(vehiclesRef.current, delta);
       updateClouds(cloudsRef.current, t, delta, wCfg.cloudOpMult, wCfg.cloudSpMult);
@@ -353,8 +377,21 @@ export default function IslandViewer() {
       // Labels (CSS2D) always face camera
       labelRenderer.render(scene, camera);
 
-      // Main render via post-processing composer
-      composer.render();
+      if (ppRef.current) {
+        const { bloomComposer, finalComposer } = ppRef.current;
+
+        // Bloom pass — camera sees only BLOOM_LAYER objects; sky background
+        // is temporarily removed so the sky never contributes to bloom.
+        const savedBg = scene.background;
+        scene.background = null;
+        camera.layers.set(BLOOM_LAYER);
+        bloomComposer.render();
+        camera.layers.enableAll();
+        scene.background = savedBg;
+
+        // Final pass — renders full scene and additively overlays bloom.
+        finalComposer.render();
+      }
     };
     animate();
 
@@ -375,7 +412,8 @@ export default function IslandViewer() {
       if (landmarkLightsRef.current) disposeLandmarkLights(landmarkLightsRef.current);
       if (celestialsRef.current) disposeCelestials(celestialsRef.current);
       controls.dispose();
-      composer.dispose();
+      ppRef.current?.bloomComposer.dispose();
+      ppRef.current?.finalComposer.dispose();
       renderer.dispose();
       disposeLabelRenderer(labelRenderer);
     };

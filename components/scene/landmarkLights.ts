@@ -212,7 +212,7 @@ export function updateLandmarkLights(
   for (const { light, flood, halos, cfg } of sys.entries) {
     light.intensity = iv * cfg.intensity;
     flood.intensity = iv * cfg.floodIntensity;
-    const haloOp = iv * 0.92;
+    const haloOp = iv * 0.45;
     for (const sp of halos) {
       (sp.material as THREE.SpriteMaterial).opacity = haloOp;
     }
