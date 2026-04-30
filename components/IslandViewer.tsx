@@ -17,7 +17,7 @@ import {
   resizeLabelRenderer,
   attachLabel,
 } from "./scene/labels";
-import { createPostProcessing, resizeComposer, BLOOM_LAYER, type PostProcessing } from "./scene/postprocessing";
+import { createPostProcessing, resizeComposer, updateDOF, BLOOM_LAYER, type PostProcessing } from "./scene/postprocessing";
 import {
   animateBuildings,
   buildingCameraTarget,
@@ -383,6 +383,11 @@ export default function IslandViewer() {
 
       // Labels (CSS2D) always face camera
       labelRenderer.render(scene, camera);
+
+      // DOF focus tracks the orbit target distance each frame
+      if (ppRef.current && controlsRef.current) {
+        updateDOF(ppRef.current, camera.position.distanceTo(controlsRef.current.target));
+      }
 
       if (ppRef.current) {
         const { bloomComposer, finalComposer } = ppRef.current;

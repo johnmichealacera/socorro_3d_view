@@ -4,6 +4,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 
 // Objects on this layer receive bloom; everything else is unaffected.
 export const BLOOM_LAYER = 1;
@@ -11,6 +12,7 @@ export const BLOOM_LAYER = 1;
 export interface PostProcessing {
   bloomComposer: EffectComposer;
   finalComposer: EffectComposer;
+  dofPass:       BokehPass;
 }
 
 // Additive blend shader — overlays the bloom texture on top of the base render.
@@ -70,6 +72,16 @@ export function createPostProcessing(
   const finalRenderPass = new RenderPass(scene, camera);
   finalComposer.addPass(finalRenderPass);
 
+  // Depth of field — blurs scene geometry based on distance from camera focus point.
+  // Placed before bloom mix so bloom glows (stars, fireflies) remain sharp on top.
+  // Aperture is intentionally tight so DOF is a subtle cinematic hint, not obtrusive.
+  const dofPass = new BokehPass(scene, camera, {
+    focus:    80,      // initial focus distance (world units) — updated per frame
+    aperture: 0.00008, // tight = large DOF range; only far background blurs noticeably
+    maxblur:  0.004,   // max blur radius stays subtle
+  });
+  finalComposer.addPass(dofPass);
+
   const mixPass = new ShaderPass(
     new THREE.ShaderMaterial({
       uniforms: {
@@ -88,7 +100,13 @@ export function createPostProcessing(
   const output = new OutputPass();
   finalComposer.addPass(output);
 
-  return { bloomComposer, finalComposer };
+  return { bloomComposer, finalComposer, dofPass };
+}
+
+// Call each frame with the distance from the camera to the orbit target so
+// DOF focus tracks wherever the user is looking.
+export function updateDOF(pp: PostProcessing, focusDistance: number): void {
+  (pp.dofPass.uniforms as Record<string, THREE.IUniform>)["focus"].value = focusDistance;
 }
 
 export function resizeComposer(
