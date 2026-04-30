@@ -39,6 +39,7 @@ import { WEATHER, applyWeatherFrame, type WeatherPreset } from "./scene/weather"
 import { createStreetLamps, updateStreetLamps, disposeStreetLamps, type LampSystem } from "./scene/streetLamps";
 import { createLandmarkLights, updateLandmarkLights, disposeLandmarkLights, type LandmarkLightSystem } from "./scene/landmarkLights";
 import { createCelestials, updateCelestials, disposeCelestials, type CelestialsSystem } from "./scene/celestials";
+import { createEventPins, updateEventPins, disposeEventPins, type EventPinObject } from "./scene/eventPins";
 import { setSimulatedHour } from "./scene/timeOverride";
 
 import { LOCATIONS } from "./scene/locations";
@@ -68,6 +69,7 @@ export default function IslandViewer() {
   const lampsRef         = useRef<LampSystem | null>(null);
   const landmarkLightsRef = useRef<LandmarkLightSystem | null>(null);
   const celestialsRef     = useRef<CelestialsSystem | null>(null);
+  const eventPinsRef      = useRef<EventPinObject[]>([]);
   const weatherRef    = useRef<WeatherPreset>("sunny");
   const skyRef      = useRef<Sky | null>(null);
   const sunRef      = useRef<THREE.DirectionalLight | null>(null);
@@ -187,6 +189,7 @@ export default function IslandViewer() {
     lampsRef.current          = createStreetLamps(scene);
     landmarkLightsRef.current = createLandmarkLights(scene, buildings);
     celestialsRef.current     = createCelestials(scene);
+    eventPinsRef.current      = createEventPins(scene, buildings);
 
     // CSS2D labels — attached to building groups
     const labelRenderer = createLabelRenderer();
@@ -347,6 +350,7 @@ export default function IslandViewer() {
       if (lampsRef.current) updateStreetLamps(lampsRef.current, t, delta);
       if (landmarkLightsRef.current) updateLandmarkLights(landmarkLightsRef.current, t, delta, wCfg.sunMult);
       if (celestialsRef.current) updateCelestials(celestialsRef.current, t);
+      updateEventPins(eventPinsRef.current, t);
 
       // Hover detection
       raycaster.current.setFromCamera(mouse.current, camera);
@@ -423,6 +427,7 @@ export default function IslandViewer() {
       if (lampsRef.current) disposeStreetLamps(lampsRef.current);
       if (landmarkLightsRef.current) disposeLandmarkLights(landmarkLightsRef.current);
       if (celestialsRef.current) disposeCelestials(celestialsRef.current);
+      disposeEventPins(eventPinsRef.current);
       controls.dispose();
       ppRef.current?.bloomComposer.dispose();
       ppRef.current?.finalComposer.dispose();

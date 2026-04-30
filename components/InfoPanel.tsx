@@ -2,6 +2,7 @@
 
 import { LocationData } from "./scene/types";
 import { CATEGORY_ICONS, CATEGORY_LABELS } from "./scene/locations";
+import { HERITAGE } from "./scene/heritage";
 
 interface InfoPanelProps {
   location: LocationData | null;
@@ -91,6 +92,58 @@ export default function InfoPanel({ location, onClose }: InfoPanelProps) {
       <p style={{ fontSize: "0.78rem", lineHeight: 1.7, color: "#b8d0e8", margin: 0 }}>
         {location.description}
       </p>
+
+      {/* Heritage section — shown only for locations with historical data */}
+      {HERITAGE[location.id] && (() => {
+        const h = HERITAGE[location.id];
+        return (
+          <>
+            <div
+              style={{
+                height: "1px",
+                background: `linear-gradient(90deg, ${location.color}50, transparent)`,
+                margin: "10px 0 8px",
+              }}
+            />
+            <div
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderLeft: `2px solid ${location.color}80`,
+                borderRadius: "6px",
+                padding: "8px 10px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.13em",
+                  textTransform: "uppercase", color: location.accentColor,
+                  marginBottom: "5px",
+                }}
+              >
+                📜 Heritage · {h.established}
+              </div>
+              <p style={{ fontSize: "0.72rem", lineHeight: 1.65, color: "#9ab8cc", margin: "0 0 7px" }}>
+                {h.history}
+              </p>
+              <div
+                style={{
+                  background: `${location.color}12`,
+                  border: `1px solid ${location.color}30`,
+                  borderRadius: "4px",
+                  padding: "5px 8px",
+                  fontSize: "0.68rem",
+                  color: "#c0d8ec",
+                  lineHeight: 1.6,
+                }}
+              >
+                <span style={{ color: location.accentColor, fontWeight: 700 }}>💡 </span>
+                {h.funFact}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       <div
         style={{

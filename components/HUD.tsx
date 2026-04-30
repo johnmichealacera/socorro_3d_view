@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import { LOCATIONS, CATEGORY_ICONS } from "./scene/locations";
 import { LocationData } from "./scene/types";
 import { WEATHER, WEATHER_ORDER, type WeatherPreset } from "./scene/weather";
+import { ANNUAL_EVENTS, daysUntil } from "./scene/eventData";
+import EventsPanel from "./EventsPanel";
+import StatsPanel from "./StatsPanel";
 
 interface HUDProps {
   selectedId:       string | null;
@@ -12,6 +15,11 @@ interface HUDProps {
   onWeatherChange:  (w: WeatherPreset) => void;
   simHour:          number | null;
   onSimHourChange:  (h: number | null) => void;
+}
+
+// Count of events in the next 60 days — shown as badge on the events button.
+function upcomingCount(): number {
+  return ANNUAL_EVENTS.filter((ev) => daysUntil(ev) <= 60).length;
 }
 
 function usePHTClock() {
@@ -80,6 +88,9 @@ export default function HUD({
 }: HUDProps) {
   const clock  = usePHTClock();
   const isSim  = simHour !== null;
+  const [showEvents, setShowEvents] = useState(false);
+  const [showStats,  setShowStats]  = useState(false);
+  const evCount = upcomingCount();
   const sliderVal = isSim ? simHour : clock.hoursDecimal;
 
   const displayTime     = isSim ? formatSimTime(simHour!) + ":00" : clock.time;
@@ -375,6 +386,78 @@ export default function HUD({
           </div>
         </div>
       </div>
+
+      {/* ── Phase 3: Events + Stats toggle buttons ──────────────────────── */}
+      <div
+        style={{
+          position: "absolute", top: "1rem",
+          right: "calc(1.5rem + 232px + 8px + 140px + 8px + 270px + 8px)",
+          display: "flex", flexDirection: "column", gap: "6px",
+          zIndex: 50, fontFamily: "-apple-system,'Segoe UI',sans-serif",
+        }}
+      >
+        {/* Events toggle */}
+        <button
+          onClick={() => { setShowEvents((v) => !v); setShowStats(false); }}
+          title="Upcoming municipal events"
+          style={{
+            display: "flex", alignItems: "center", gap: "6px",
+            padding: "6px 10px",
+            background: showEvents ? "rgba(56,189,248,0.18)" : "rgba(4,10,22,0.78)",
+            border: `1px solid ${showEvents ? "rgba(56,189,248,0.55)" : "rgba(255,255,255,0.09)"}`,
+            borderRadius: "8px", color: showEvents ? "#38bdf8" : "#8aaccc",
+            cursor: "pointer", fontFamily: "inherit", fontSize: "0.7rem",
+            fontWeight: 600, backdropFilter: "blur(12px)",
+            boxShadow: showEvents ? "0 0 10px rgba(56,189,248,0.2)" : "none",
+            transition: "all 0.15s", whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: "0.9rem" }}>📅</span>
+          Events
+          {evCount > 0 && (
+            <span
+              style={{
+                background: "#38bdf8", color: "#020e1a",
+                borderRadius: "10px", fontSize: "0.56rem", fontWeight: 800,
+                padding: "1px 5px", lineHeight: 1.4,
+              }}
+            >
+              {evCount}
+            </span>
+          )}
+        </button>
+
+        {/* Stats toggle */}
+        <button
+          onClick={() => { setShowStats((v) => !v); setShowEvents(false); }}
+          title="Municipality statistics"
+          style={{
+            display: "flex", alignItems: "center", gap: "6px",
+            padding: "6px 10px",
+            background: showStats ? "rgba(245,158,11,0.18)" : "rgba(4,10,22,0.78)",
+            border: `1px solid ${showStats ? "rgba(245,158,11,0.55)" : "rgba(255,255,255,0.09)"}`,
+            borderRadius: "8px", color: showStats ? "#F59E0B" : "#8aaccc",
+            cursor: "pointer", fontFamily: "inherit", fontSize: "0.7rem",
+            fontWeight: 600, backdropFilter: "blur(12px)",
+            boxShadow: showStats ? "0 0 10px rgba(245,158,11,0.2)" : "none",
+            transition: "all 0.15s", whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: "0.9rem" }}>📊</span>
+          Stats
+        </button>
+      </div>
+
+      {/* Phase 3 panels */}
+      {showEvents && (
+        <EventsPanel
+          onClose={() => setShowEvents(false)}
+          onLocationSelect={(id) => { onLocationSelect(id); setShowEvents(false); }}
+        />
+      )}
+      {showStats && (
+        <StatsPanel onClose={() => setShowStats(false)} />
+      )}
 
       {/* ── Compass rose ────────────────────────────────────────────────── */}
       <div
