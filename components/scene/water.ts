@@ -1,13 +1,8 @@
 import * as THREE from "three";
+import { getPHTPhase, isSimulating } from "./timeOverride";
 
 // ── PHT wave schedule ─────────────────────────────────────────────────────────
 // Philippines trade-wind cycle: calm at night, moderate morning, peak ~3 PM.
-
-function getPHTPhase(): number {
-  const now = new Date();
-  const sec = (now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds() + 8 * 3600) % 86400;
-  return sec / 86400;
-}
 
 function phtWaveBase(): number {
   const ph = getPHTPhase();
@@ -26,9 +21,11 @@ let _amp        = phtWaveBase();
 let _ampCheckAt = 0;
 
 function smoothedWaveAmp(t: number, weatherMult: number): number {
-  if (t - _ampCheckAt > 2.0) {
+  const sim = isSimulating();
+  if (sim || t - _ampCheckAt > 2.0) {
     _ampCheckAt = t;
-    _amp += (phtWaveBase() - _amp) * 0.04; // slow smooth transition
+    const target = phtWaveBase();
+    _amp = sim ? target : _amp + (target - _amp) * 0.04;
   }
   return _amp * weatherMult;
 }

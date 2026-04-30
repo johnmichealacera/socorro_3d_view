@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OSM_ROADS } from "./roads";
 import { terrainHeight } from "./terrain";
+import { getPHTHoursDecimal, isSimulating } from "./timeOverride";
 
 export interface VehicleData {
   mesh:        THREE.Group;
@@ -151,30 +152,25 @@ export function createVehicles(scene: THREE.Scene): VehicleData[] {
 // Tricycles operate 06:00–22:00 PHT; off the rest of the night.
 
 function vehicleScheduleTarget(): number {
-  const now  = new Date();
-  const phtH = (now.getUTCHours() + 8) % 24;
-  const phtM = now.getUTCMinutes();
-  const hm   = phtH + phtM / 60;
-
+  const hm = getPHTHoursDecimal();
   if (hm < 5.5  || hm >= 22.0) return 0;
-  if (hm >= 5.5  && hm <  6.5) return hm - 5.5;      // ramp in at dawn
-  if (hm >= 21.0 && hm < 22.0) return 1.0 - (hm - 21.0); // ramp out late night
+  if (hm >= 5.5  && hm <  6.5) return hm - 5.5;
+  if (hm >= 21.0 && hm < 22.0) return 1.0 - (hm - 21.0);
   return 1.0;
 }
 
 let _vCheckAt   = 0;
-let _vIntensity = vehicleScheduleTarget(); // initialize to real PHT
+let _vIntensity = vehicleScheduleTarget();
 
 export function updateVehicles(vehicles: VehicleData[], delta: number): void {
   if (delta === 0) return;
 
-  // Throttle PHT check to every 2 seconds
-  // We use a rough clock since we don't pass t here; use Date.now() ms
-  const now = performance.now() / 1000;
-  if (now - _vCheckAt > 2.0) {
-    _vCheckAt = now;
+  const perf = performance.now() / 1000;
+  const sim  = isSimulating();
+  if (sim || perf - _vCheckAt > 2.0) {
+    _vCheckAt = perf;
     const target = vehicleScheduleTarget();
-    _vIntensity += (target - _vIntensity) * 0.05;
+    _vIntensity  = sim ? target : _vIntensity + (target - _vIntensity) * 0.05;
   }
 
   const active = _vIntensity > 0.05;

@@ -39,6 +39,7 @@ import { WEATHER, applyWeatherFrame, type WeatherPreset } from "./scene/weather"
 import { createStreetLamps, updateStreetLamps, disposeStreetLamps, type LampSystem } from "./scene/streetLamps";
 import { createLandmarkLights, updateLandmarkLights, disposeLandmarkLights, type LandmarkLightSystem } from "./scene/landmarkLights";
 import { createCelestials, updateCelestials, disposeCelestials, type CelestialsSystem } from "./scene/celestials";
+import { setSimulatedHour } from "./scene/timeOverride";
 
 import { LOCATIONS } from "./scene/locations";
 import { LocationData, BuildingGroup } from "./scene/types";
@@ -84,9 +85,15 @@ export default function IslandViewer() {
   const [selectedId,        setSelectedId]         = useState<string | null>(null);
   const [selectedDiscovery, setSelectedDiscovery]  = useState<DiscoveryDef | null>(null);
   const [weather,           setWeather]            = useState<WeatherPreset>("sunny");
+  const [simHour,           setSimHour]            = useState<number | null>(null);
 
   // Keep ref in sync
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
+
+  // Sync simulated hour to the timeOverride module so all scene systems pick it up
+  useEffect(() => { setSimulatedHour(simHour); }, [simHour]);
+
+  const changeSimHour = useCallback((h: number | null) => { setSimHour(h); }, []);
 
   // ── Selection helpers ────────────────────────────────────────────────────────
 
@@ -432,6 +439,8 @@ export default function IslandViewer() {
         onLocationSelect={selectLocation}
         weather={weather}
         onWeatherChange={changeWeather}
+        simHour={simHour}
+        onSimHourChange={changeSimHour}
       />
 
       <InfoPanel location={selectedLocation} onClose={clearSelection} />

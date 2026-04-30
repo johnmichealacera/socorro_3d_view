@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { OSM_ROADS } from "./roads";
 import { terrainHeight } from "./terrain";
+import { getPHTHoursDecimal, isSimulating } from "./timeOverride";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -219,27 +220,26 @@ export function createStreetLamps(scene: THREE.Scene): LampSystem {
 // ── PHT time → lamp intensity 0..1 ───────────────────────────────────────────
 
 function targetIntensity(): number {
-  const now  = new Date();
-  const phtH = (now.getUTCHours() + 8) % 24;
-  const phtM = now.getUTCMinutes();
-  const hm   = phtH + phtM / 60;
-
-  if (hm >= 18.5 || hm < 5.5)  return 1.0;               // fully on (night)
-  if (hm >= 17.5 && hm < 18.5) return hm - 17.5;         // fading in at dusk
-  if (hm >= 5.5  && hm < 6.5)  return 1.0 - (hm - 5.5); // fading out at dawn
-  return 0;                                                 // fully off (daytime)
+  const hm = getPHTHoursDecimal();
+  if (hm >= 18.5 || hm < 5.5)  return 1.0;
+  if (hm >= 17.5 && hm < 18.5) return hm - 17.5;
+  if (hm >= 5.5  && hm < 6.5)  return 1.0 - (hm - 5.5);
+  return 0;
 }
 
 let _checkAt = 0;
 let _target  = targetIntensity();
 
 export function updateStreetLamps(sys: LampSystem, t: number, delta: number): void {
-  if (t - _checkAt > 2.0) {
+  const sim = isSimulating();
+  if (sim || t - _checkAt > 2.0) {
     _target  = targetIntensity();
     _checkAt = t;
   }
 
-  sys.intensity += (_target - sys.intensity) * Math.min(1, delta * 1.2);
+  sys.intensity = sim
+    ? _target
+    : sys.intensity + (_target - sys.intensity) * Math.min(1, delta * 1.2);
   const iv = sys.intensity;
 
   // Single material update → all lamp heads change at once

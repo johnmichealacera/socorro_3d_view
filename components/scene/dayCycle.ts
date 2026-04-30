@@ -1,15 +1,6 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
-
-// Philippines Standard Time = UTC+8
-// phase 0.0 = midnight, 0.25 = 6 AM, 0.5 = noon, 0.75 = 6 PM, 1.0 = midnight
-function getPhilippinesPhase(): number {
-  const now = new Date();
-  const secondsOfDay =
-    (now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds() + 8 * 3600) %
-    86400;
-  return secondsOfDay / 86400;
-}
+import { getPHTPhase } from "./timeOverride";
 
 // Approximate sunrise/sunset for Surigao del Norte (≈ 9.8°N)
 const SUNRISE = 6  / 24; // ~6:00 AM
@@ -91,7 +82,7 @@ export function updateDayCycle(
   hemisphere: THREE.HemisphereLight,
   scene:      THREE.Scene
 ): void {
-  const phase = getPhilippinesPhase();
+  const phase = getPHTPhase();
 
   // Elevation: sine arc from sunrise to sunset; 0 outside those hours
   const dayFrac  = (phase - SUNRISE) / (SUNSET - SUNRISE);

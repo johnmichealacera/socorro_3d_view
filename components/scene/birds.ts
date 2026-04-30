@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { getPHTHoursDecimal, isSimulating } from "./timeOverride";
 
 export interface BirdData {
   sprite:      THREE.Sprite;
@@ -103,25 +104,22 @@ export function createBirds(scene: THREE.Scene): BirdData[] {
 // Birds are active during daylight hours only (PHT).
 
 function birdScheduleTarget(): number {
-  const now  = new Date();
-  const phtH = (now.getUTCHours() + 8) % 24;
-  const phtM = now.getUTCMinutes();
-  const hm   = phtH + phtM / 60;
-
-  if (hm < 5.5  || hm >= 20.0) return 0;            // night — birds are roosting
-  if (hm >= 5.5  && hm <  6.5) return hm - 5.5;     // dawn ramp-in
-  if (hm >= 19.0 && hm < 20.0) return 1.0 - (hm - 19.0); // dusk ramp-out
+  const hm = getPHTHoursDecimal();
+  if (hm < 5.5  || hm >= 20.0) return 0;
+  if (hm >= 5.5  && hm <  6.5) return hm - 5.5;
+  if (hm >= 19.0 && hm < 20.0) return 1.0 - (hm - 19.0);
   return 1.0;
 }
 
 let _birdCheckAt   = 0;
-let _birdIntensity = birdScheduleTarget(); // initialize to real PHT, not 1.0
+let _birdIntensity = birdScheduleTarget();
 
 export function updateBirds(birds: BirdData[], t: number, delta: number): void {
-  if (t - _birdCheckAt > 2.0) {
+  const sim = isSimulating();
+  if (sim || t - _birdCheckAt > 2.0) {
     _birdCheckAt = t;
     const target = birdScheduleTarget();
-    _birdIntensity += (target - _birdIntensity) * 0.05; // smooth transition
+    _birdIntensity = sim ? target : _birdIntensity + (target - _birdIntensity) * 0.05;
   }
 
   const iv = _birdIntensity;

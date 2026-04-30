@@ -10,6 +10,7 @@
 import * as THREE from "three";
 import { BuildingGroup } from "./types";
 import { terrainHeight } from "./terrain";
+import { getPHTData as _getPHTData, isSimulating } from "./timeOverride";
 
 // ─── Palette — vivid so they stand out from terrain ──────────────────────────
 
@@ -151,13 +152,7 @@ function makeDisc(color: string): THREE.Mesh {
 
 // ─── PHT helpers ─────────────────────────────────────────────────────────────
 
-function getPHTData(): { hour: number; minute: number; dow: number } {
-  const now  = new Date();
-  const utcH = now.getUTCHours();
-  const phtH = (utcH + 8) % 24;
-  const phtD = utcH + 8 >= 24 ? (now.getUTCDay() + 1) % 7 : now.getUTCDay();
-  return { hour: phtH, minute: now.getUTCMinutes(), dow: phtD };
-}
+const getPHTData = _getPHTData;
 
 function scheduledOpacity(category: string, hour: number, minute: number, dow: number): number {
   const hm = hour + minute / 60;
@@ -343,7 +338,8 @@ let _scheduleCheckAt = 0;
 let _phtCache = getPHTData(); // initialize with real PHT, never use a fake default
 
 export function updateNPCs(npcs: NPCData[], t: number, delta: number): void {
-  if (t - _scheduleCheckAt > 1.0) {
+  const sim = isSimulating();
+  if (sim || t - _scheduleCheckAt > 1.0) {
     _phtCache = getPHTData();
     _scheduleCheckAt = t;
   }
@@ -352,7 +348,9 @@ export function updateNPCs(npcs: NPCData[], t: number, delta: number): void {
   for (const npc of npcs) {
     // Smooth schedule opacity
     const target = scheduledOpacity(npc.category, hour, minute, dow);
-    npc.scheduleOpacity += (target - npc.scheduleOpacity) * 0.015;
+    npc.scheduleOpacity = sim
+      ? target
+      : npc.scheduleOpacity + (target - npc.scheduleOpacity) * 0.015;
     const mat = npc.sprite.material as THREE.SpriteMaterial;
     mat.opacity = npc.scheduleOpacity;
     (npc.disc.material as THREE.MeshBasicMaterial).opacity = npc.scheduleOpacity * 0.72;

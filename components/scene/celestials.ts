@@ -1,12 +1,5 @@
 import * as THREE from "three";
-
-// ── PHT phase (matches dayCycle.ts exactly) ───────────────────────────────────
-
-function getPHTPhase(): number {
-  const now = new Date();
-  const sec = (now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds() + 8 * 3600) % 86400;
-  return sec / 86400;
-}
+import { getPHTPhase } from "./timeOverride";
 
 const SUNRISE = 6  / 24;
 const SUNSET  = 18 / 24;

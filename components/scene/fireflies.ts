@@ -1,9 +1,5 @@
 import * as THREE from "three";
-
-function getPHTHour(): number {
-  const now = new Date();
-  return (now.getUTCHours() + 8) % 24;
-}
+import { getPHTHour } from "./timeOverride";
 
 function makeGlowTex(): THREE.CanvasTexture {
   const c = document.createElement("canvas");

@@ -10,6 +10,7 @@
 import * as THREE from "three";
 import { BuildingGroup } from "./types";
 import { GLASS_MATS } from "./markers";
+import { getPHTHoursDecimal, isSimulating } from "./timeOverride";
 
 // ── Window glow halo texture ──────────────────────────────────────────────────
 // Soft white rectangle — simulates light spilling from a window row.
@@ -174,11 +175,7 @@ export function createLandmarkLights(
 // ── PHT time → lamp intensity ─────────────────────────────────────────────────
 
 function nightIntensity(): number {
-  const now  = new Date();
-  const phtH = (now.getUTCHours() + 8) % 24;
-  const phtM = now.getUTCMinutes();
-  const hm   = phtH + phtM / 60;
-
+  const hm = getPHTHoursDecimal();
   if (hm >= 18.5 || hm < 5.5)  return 1.0;
   if (hm >= 17.5 && hm < 18.5) return hm - 17.5;
   if (hm >= 5.5  && hm < 6.5)  return 1.0 - (hm - 5.5);
@@ -194,18 +191,18 @@ export function updateLandmarkLights(
   delta:        number,
   weatherSunMult: number,   // 0..1 — lower = darker weather, boosts lights
 ): void {
-  if (t - _checkAt > 2.0) {
+  const sim = isSimulating();
+  if (sim || t - _checkAt > 2.0) {
     _nightTgt = nightIntensity();
     _checkAt  = t;
   }
 
-  // Weather darkness contributes light demand: storm (sunMult 0.09) → darkBoost ≈ 0.85
-  const darkBoost = Math.max(0, 1.0 - weatherSunMult);
-  // Weather boost is capped so daytime with light drizzle doesn't fully light up
+  const darkBoost    = Math.max(0, 1.0 - weatherSunMult);
   const weatherBoost = darkBoost * 0.88;
-
-  const target = Math.max(_nightTgt, weatherBoost);
-  sys.intensity += (target - sys.intensity) * Math.min(1, delta * 1.0);
+  const target       = Math.max(_nightTgt, weatherBoost);
+  sys.intensity = sim
+    ? target
+    : sys.intensity + (target - sys.intensity) * Math.min(1, delta * 1.0);
   const iv = sys.intensity;
 
   // Animate each building's lights + halos
