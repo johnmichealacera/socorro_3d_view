@@ -58,6 +58,40 @@ export const DISCOVERIES: DiscoveryDef[] = [
     position: [24, 0.4, -2],
     color: "#607888",
   },
+
+  // ── Phase 4: Folklore & Oral Traditions ──────────────────────────────────────
+  {
+    id:    "white-sand-legend",
+    name:  "Legend of the White Sand",
+    icon:  "🐚",
+    story: "The elders say Puyangi's sand is white because it was carried piece by piece from the sea floor by the spirits of the coral. Every grain is a prayer — left by creatures who gave their bodies to the reef so the beach could exist. Do not take the sand home. It remembers where it came from.",
+    position: [25, 0.4, 58],
+    color: "#e0d0a0",
+  },
+  {
+    id:    "sohoton-keeper",
+    name:  "The Sohoton Keeper",
+    icon:  "🪼",
+    story: "Past the headland, beyond what maps mark, there is a cove where jellyfish live without stingers. The old fishermen say they are the souls of children who drowned there long ago — made gentle by the sea. You can swim among them if your heart is quiet. If it is not, they will know.",
+    position: [20, 0.4, 50],
+    color: "#80c8e8",
+  },
+  {
+    id:    "fishermans-star",
+    name:  "The Fisherman's Star",
+    icon:  "⭐",
+    story: "Long before GPS, every fisherman from Socorro learned to find the same star — low on the horizon, slightly east of south. A grandfather would take his grandson to the pier before dawn and point. 'That star,' he would say, 'is always there. When you are lost, find that.' Several of those grandsons still fish these waters.",
+    position: [22, 0.4, 10],
+    color: "#ffd080",
+  },
+  {
+    id:    "bell-that-rang",
+    name:  "The Bell That Rang Alone",
+    icon:  "🔔",
+    story: "During the great typhoon of 1984, when the wind had taken the power lines and the streets were rivers, the church bell rang at 3 in the morning. No one could reach it. No one was there. Those who sheltered in the church that night say it rang exactly twelve times, slowly, like a count. By morning the storm had passed. The priest wrote in his journal: 'I do not know what rang it. I am grateful.'",
+    position: [-6, 1.0, -8],
+    color: "#c0a060",
+  },
 ];
 
 export interface DiscoveryObject {

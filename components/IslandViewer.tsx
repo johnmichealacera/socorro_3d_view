@@ -40,6 +40,7 @@ import { createStreetLamps, updateStreetLamps, disposeStreetLamps, type LampSyst
 import { createLandmarkLights, updateLandmarkLights, disposeLandmarkLights, type LandmarkLightSystem } from "./scene/landmarkLights";
 import { createCelestials, updateCelestials, disposeCelestials, type CelestialsSystem } from "./scene/celestials";
 import { createEventPins, updateEventPins, disposeEventPins, type EventPinObject } from "./scene/eventPins";
+import { createVisitors, updateVisitors, disposeVisitors, type VisitorData } from "./scene/visitors";
 import { setSimulatedHour } from "./scene/timeOverride";
 
 import { LOCATIONS } from "./scene/locations";
@@ -70,6 +71,7 @@ export default function IslandViewer() {
   const landmarkLightsRef = useRef<LandmarkLightSystem | null>(null);
   const celestialsRef     = useRef<CelestialsSystem | null>(null);
   const eventPinsRef      = useRef<EventPinObject[]>([]);
+  const visitorsRef       = useRef<VisitorData[]>([]);
   const weatherRef    = useRef<WeatherPreset>("sunny");
   const skyRef      = useRef<Sky | null>(null);
   const sunRef      = useRef<THREE.DirectionalLight | null>(null);
@@ -88,6 +90,9 @@ export default function IslandViewer() {
   const [selectedDiscovery, setSelectedDiscovery]  = useState<DiscoveryDef | null>(null);
   const [weather,           setWeather]            = useState<WeatherPreset>("sunny");
   const [simHour,           setSimHour]            = useState<number | null>(null);
+  // Phase 4
+  const [isLiveWeather,    setIsLiveWeather]    = useState(false);
+  const [liveWeatherInfo,  setLiveWeatherInfo]  = useState<{ tempC: number; description: string } | null>(null);
 
   // Keep ref in sync
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
@@ -96,6 +101,63 @@ export default function IslandViewer() {
   useEffect(() => { setSimulatedHour(simHour); }, [simHour]);
 
   const changeSimHour = useCallback((h: number | null) => { setSimHour(h); }, []);
+
+  // ── Phase 4: Live weather polling ────────────────────────────────────────────
+  useEffect(() => {
+    async function fetchWeather() {
+      try {
+        const res  = await fetch("/api/weather");
+        const data = await res.json();
+        if (data.isLive) {
+          setIsLiveWeather(true);
+          setLiveWeatherInfo({ tempC: data.tempC, description: data.description });
+          weatherRef.current = data.preset;
+          setWeather(data.preset);
+          const cfg = WEATHER[data.preset as WeatherPreset];
+          if (rainRef.current) setRaining(rainRef.current, cfg.raining);
+        } else {
+          setIsLiveWeather(false);
+        }
+      } catch { /* no-op — live weather is optional */ }
+    }
+    fetchWeather();
+    const id = setInterval(fetchWeather, 10 * 60 * 1000); // every 10 minutes
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Phase 4: Share / deep-link ───────────────────────────────────────────────
+  // Restore camera from URL hash on first render (runs once after scene init).
+  const urlRestoredRef = useRef(false);
+  useEffect(() => {
+    if (urlRestoredRef.current) return;
+    urlRestoredRef.current = true;
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const p = new URLSearchParams(hash);
+    const cam = p.get("c")?.split(",").map(Number);
+    const tgt = p.get("t")?.split(",").map(Number);
+    const loc = p.get("s");
+    if (cam?.length === 3 && cameraRef.current) {
+      cameraRef.current.position.set(cam[0], cam[1], cam[2]);
+    }
+    if (tgt?.length === 2 && controlsRef.current) {
+      controlsRef.current.target.set(tgt[0], 0, tgt[1]);
+      controlsRef.current.update();
+    }
+    if (loc) selectLocation(loc);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getShareURL = useCallback((): string => {
+    const cam = cameraRef.current;
+    const ctl = controlsRef.current;
+    if (!cam || !ctl) return window.location.href;
+    const c = `${cam.position.x.toFixed(1)},${cam.position.y.toFixed(1)},${cam.position.z.toFixed(1)}`;
+    const t = `${ctl.target.x.toFixed(1)},${ctl.target.z.toFixed(1)}`;
+    const s = selectedId ? `&s=${selectedId}` : "";
+    return `${window.location.origin}${window.location.pathname}#c=${c}&t=${t}${s}`;
+  }, [selectedId]);
 
   // ── Selection helpers ────────────────────────────────────────────────────────
 
@@ -190,6 +252,7 @@ export default function IslandViewer() {
     landmarkLightsRef.current = createLandmarkLights(scene, buildings);
     celestialsRef.current     = createCelestials(scene);
     eventPinsRef.current      = createEventPins(scene, buildings);
+    visitorsRef.current       = createVisitors(scene);
 
     // CSS2D labels — attached to building groups
     const labelRenderer = createLabelRenderer();
@@ -351,6 +414,7 @@ export default function IslandViewer() {
       if (landmarkLightsRef.current) updateLandmarkLights(landmarkLightsRef.current, t, delta, wCfg.sunMult);
       if (celestialsRef.current) updateCelestials(celestialsRef.current, t);
       updateEventPins(eventPinsRef.current, t);
+      updateVisitors(visitorsRef.current, t, delta);
 
       // Hover detection
       raycaster.current.setFromCamera(mouse.current, camera);
@@ -428,6 +492,7 @@ export default function IslandViewer() {
       if (landmarkLightsRef.current) disposeLandmarkLights(landmarkLightsRef.current);
       if (celestialsRef.current) disposeCelestials(celestialsRef.current);
       disposeEventPins(eventPinsRef.current);
+      disposeVisitors(visitorsRef.current);
       controls.dispose();
       ppRef.current?.bloomComposer.dispose();
       ppRef.current?.finalComposer.dispose();
@@ -451,6 +516,10 @@ export default function IslandViewer() {
         onWeatherChange={changeWeather}
         simHour={simHour}
         onSimHourChange={changeSimHour}
+        visitorCount={visitorsRef.current.length}
+        isLiveWeather={isLiveWeather}
+        liveWeatherInfo={liveWeatherInfo}
+        onGetShareURL={getShareURL}
       />
 
       <InfoPanel location={selectedLocation} onClose={clearSelection} />

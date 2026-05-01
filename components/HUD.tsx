@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { LOCATIONS, CATEGORY_ICONS } from "./scene/locations";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { LOCATIONS, CATEGORY_ICONS, CATEGORY_LABELS } from "./scene/locations";
 import { LocationData } from "./scene/types";
 import { WEATHER, WEATHER_ORDER, type WeatherPreset } from "./scene/weather";
 import { ANNUAL_EVENTS, daysUntil } from "./scene/eventData";
@@ -15,11 +15,36 @@ interface HUDProps {
   onWeatherChange:  (w: WeatherPreset) => void;
   simHour:          number | null;
   onSimHourChange:  (h: number | null) => void;
+  // Phase 4
+  visitorCount:     number;
+  isLiveWeather:    boolean;
+  liveWeatherInfo:  { tempC: number; description: string } | null;
+  onGetShareURL:    () => string;
 }
 
 // Count of events in the next 60 days — shown as badge on the events button.
 function upcomingCount(): number {
   return ANNUAL_EVENTS.filter((ev) => daysUntil(ev) <= 60).length;
+}
+
+// Group locations by category, optionally filtered by a search string.
+function groupedLocations(filter: string) {
+  const q = filter.toLowerCase().trim();
+  const seen = new Set<string>();
+  const order: LocationData["category"][] = [];
+  for (const l of LOCATIONS) {
+    if (!seen.has(l.category)) { seen.add(l.category); order.push(l.category); }
+  }
+  return order
+    .map((cat) => ({
+      category: cat,
+      locs: LOCATIONS.filter(
+        (l) =>
+          l.category === cat &&
+          (q === "" || l.name.toLowerCase().includes(q) || l.category.includes(q)),
+      ),
+    }))
+    .filter((g) => g.locs.length > 0);
 }
 
 function usePHTClock() {
@@ -85,12 +110,49 @@ export default function HUD({
   selectedId, onLocationSelect,
   weather, onWeatherChange,
   simHour, onSimHourChange,
+  visitorCount, isLiveWeather, liveWeatherInfo, onGetShareURL,
 }: HUDProps) {
   const clock  = usePHTClock();
   const isSim  = simHour !== null;
-  const [showEvents, setShowEvents] = useState(false);
-  const [showStats,  setShowStats]  = useState(false);
+  const [showEvents,    setShowEvents]    = useState(false);
+  const [showStats,     setShowStats]     = useState(false);
+  const [copyLabel,     setCopyLabel]     = useState<"share" | "copied">("share");
+  const [showLocations, setShowLocations] = useState(false);
+  const [locFilter,     setLocFilter]     = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const evCount = upcomingCount();
+
+  // Close location dropdown on outside click
+  useEffect(() => {
+    if (!showLocations) return;
+    const handler = (e: MouseEvent) => {
+      if (!dropdownRef.current?.contains(e.target as Node)) {
+        setShowLocations(false);
+        setLocFilter("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showLocations]);
+
+  const closeLocations = useCallback(() => {
+    setShowLocations(false);
+    setLocFilter("");
+  }, []);
+
+  // Derived trigger-button values
+  const selLoc      = selectedId ? LOCATIONS.find((l) => l.id === selectedId) : null;
+  const triggerIcon = selLoc ? CATEGORY_ICONS[selLoc.category] : "🗺️";
+  const triggerName = selLoc ? selLoc.name : "Explore Landmarks";
+  const triggerColor = selLoc ? selLoc.color : null;
+
+  function handleShare() {
+    const url = onGetShareURL();
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyLabel("copied");
+      setTimeout(() => setCopyLabel("share"), 2200);
+    });
+  }
   const sliderVal = isSim ? simHour : clock.hoursDecimal;
 
   const displayTime     = isSim ? formatSimTime(simHour!) + ":00" : clock.time;
@@ -167,67 +229,204 @@ export default function HUD({
         <p style={{ fontSize: "0.72rem", color: "#6888a8", margin: "4px 0 0", letterSpacing: "0.06em" }}>
           SURIGAO DEL NORTE · BUCAS GRANDE ISLAND · PHILIPPINES
         </p>
+
+        {/* Visitor count + share — sit below the title */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px", pointerEvents: "all" }}>
+          <span style={{
+            fontSize: "0.62rem", color: "#4ECDC4", letterSpacing: "0.06em",
+            display: "flex", alignItems: "center", gap: "5px",
+          }}>
+            <span style={{
+              width: "6px", height: "6px", borderRadius: "50%",
+              background: "#4ECDC4", boxShadow: "0 0 5px #4ECDC4",
+              display: "inline-block", animation: "none",
+            }} />
+            {visitorCount} exploring now
+          </span>
+
+          <button
+            onClick={handleShare}
+            style={{
+              fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: copyLabel === "copied" ? "#34D399" : "#7aaccc",
+              padding: "2px 8px",
+              border: `1px solid ${copyLabel === "copied" ? "rgba(52,211,153,0.45)" : "rgba(255,255,255,0.15)"}`,
+              borderRadius: "4px",
+              background: copyLabel === "copied" ? "rgba(52,211,153,0.1)" : "rgba(255,255,255,0.04)",
+              cursor: "pointer", fontFamily: "inherit",
+              transition: "all 0.2s",
+            }}
+          >
+            {copyLabel === "copied" ? "✓ Copied!" : "📤 Share View"}
+          </button>
+        </div>
       </div>
 
-      {/* ── Left sidebar – location list ─────────────────────────────────── */}
+      {/* ── Location selector dropdown ───────────────────────────────────── */}
       <div
+        ref={dropdownRef}
         style={{
-          position: "absolute", top: "50%", left: "1rem",
-          transform: "translateY(-50%)",
-          display: "flex", flexDirection: "column", gap: "3px",
-          zIndex: 50,
+          position: "absolute",
+          top: "7rem",
+          left: "1rem",
+          zIndex: 110,
           fontFamily: "-apple-system, 'Segoe UI', sans-serif",
-          maxHeight: "calc(100vh - 7rem)", overflowY: "auto", overflowX: "hidden",
-          paddingRight: "4px", scrollbarWidth: "thin",
-          scrollbarColor: "rgba(56,189,248,0.3) transparent",
-        } as React.CSSProperties}
+        }}
       >
-        {LOCATIONS.map((loc: LocationData) => {
-          const active = selectedId === loc.id;
-          return (
-            <button
-              key={loc.id}
-              onClick={() => onLocationSelect(loc.id)}
-              title={loc.name}
-              style={{
-                display: "flex", alignItems: "center", gap: "7px",
-                padding: "4px 10px 4px 7px",
-                background: active ? `linear-gradient(90deg, ${loc.color}cc, ${loc.color}88)` : "rgba(4,10,22,0.72)",
-                border: `1px solid ${active ? loc.color : "rgba(255,255,255,0.08)"}`,
-                borderRadius: "7px",
-                color: active ? "#fff" : "#a0c0d8",
-                cursor: "pointer", fontSize: "0.72rem",
-                fontWeight: active ? 700 : 400,
-                fontFamily: "inherit",
-                backdropFilter: "blur(10px)",
-                boxShadow: active ? `0 0 16px ${loc.color}55` : "none",
-                whiteSpace: "nowrap", transition: "all 0.18s",
-              }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLButtonElement).style.background = `${loc.color}28`;
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = `${loc.color}66`;
-                  (e.currentTarget as HTMLButtonElement).style.color = "#d8ecf8";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(4,10,22,0.72)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.08)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#a0c0d8";
-                }
-              }}
-            >
-              <span style={{ fontSize: "1rem", lineHeight: 1 }}>
-                {CATEGORY_ICONS[loc.category as LocationData["category"]]}
-              </span>
-              <span>{loc.name}</span>
-              {active && (
-                <span style={{ marginLeft: "auto", width: "6px", height: "6px", borderRadius: "50%", background: "#fff", flexShrink: 0 }} />
+        {/* Trigger button */}
+        <button
+          onClick={() => setShowLocations((v) => !v)}
+          style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "7px 10px 7px 12px",
+            minWidth: "210px",
+            background: "rgba(4,10,22,0.88)",
+            backdropFilter: "blur(14px)",
+            border: showLocations
+              ? "1px solid rgba(56,189,248,0.5)"
+              : triggerColor
+                ? `1px solid ${triggerColor}55`
+                : "1px solid rgba(255,255,255,0.13)",
+            borderRadius: showLocations ? "9px 9px 0 0" : "9px",
+            color: "#e0f0ff",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: "0.75rem",
+            fontWeight: selLoc ? 600 : 400,
+            justifyContent: "space-between",
+            boxShadow: triggerColor ? `0 2px 14px ${triggerColor}22` : "0 2px 14px rgba(0,0,0,0.4)",
+            transition: "border-color 0.15s, border-radius 0.15s",
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden" }}>
+            <span style={{ fontSize: "1.05rem", flexShrink: 0 }}>{triggerIcon}</span>
+            <span style={{
+              color: selLoc ? "#f0f8ff" : "#7aaccc",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {triggerName}
+            </span>
+          </span>
+          <span style={{
+            fontSize: "0.55rem", color: "#4a6a88", flexShrink: 0, marginLeft: "6px",
+            display: "inline-block",
+            transform: showLocations ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s",
+          }}>
+            ▾
+          </span>
+        </button>
+
+        {/* Dropdown panel */}
+        {showLocations && (
+          <div style={{
+            position: "absolute",
+            top: "100%", left: 0,
+            width: "240px",
+            maxHeight: "62vh",
+            overflowY: "auto",
+            background: "rgba(4,10,22,0.96)",
+            backdropFilter: "blur(18px)",
+            border: "1px solid rgba(56,189,248,0.28)",
+            borderTop: "1px solid rgba(56,189,248,0.12)",
+            borderRadius: "0 9px 9px 9px",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.75)",
+            scrollbarWidth: "thin",
+            scrollbarColor: "rgba(56,189,248,0.2) transparent",
+          } as React.CSSProperties}>
+
+            {/* Filter input */}
+            <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "rgba(4,10,22,0.98)", zIndex: 1 }}>
+              <input
+                type="text"
+                placeholder="Search landmarks…"
+                value={locFilter}
+                onChange={(e) => setLocFilter(e.target.value)}
+                autoFocus
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  borderRadius: "5px",
+                  padding: "5px 9px",
+                  fontSize: "0.72rem",
+                  color: "#d0e8f8",
+                  outline: "none",
+                  fontFamily: "inherit",
+                } as React.CSSProperties}
+              />
+            </div>
+
+            {/* Grouped location list */}
+            <div style={{ padding: "4px 0 8px" }}>
+              {groupedLocations(locFilter).map(({ category, locs }) => (
+                <div key={category}>
+                  <div style={{
+                    fontSize: "0.52rem", fontWeight: 700, letterSpacing: "0.12em",
+                    textTransform: "uppercase", color: "#3a5a78",
+                    padding: "6px 12px 3px",
+                  }}>
+                    {CATEGORY_LABELS[category as LocationData["category"]]}
+                  </div>
+                  {locs.map((loc) => {
+                    const active = selectedId === loc.id;
+                    return (
+                      <button
+                        key={loc.id}
+                        onClick={() => { onLocationSelect(loc.id); closeLocations(); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "9px",
+                          width: "100%", padding: "5px 12px 5px 10px",
+                          background: active ? `${loc.color}20` : "transparent",
+                          border: "none",
+                          borderLeft: `3px solid ${active ? loc.color : "transparent"}`,
+                          color: active ? "#f0f8ff" : "#8aaccc",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          fontSize: "0.73rem",
+                          fontWeight: active ? 600 : 400,
+                          textAlign: "left",
+                          transition: "background 0.1s, color 0.1s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!active) {
+                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
+                            (e.currentTarget as HTMLButtonElement).style.color = "#c8e0f4";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!active) {
+                            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                            (e.currentTarget as HTMLButtonElement).style.color = "#8aaccc";
+                          }
+                        }}
+                      >
+                        <span style={{ fontSize: "0.9rem", flexShrink: 0 }}>
+                          {CATEGORY_ICONS[loc.category]}
+                        </span>
+                        <span style={{ lineHeight: 1.35, flex: 1 }}>{loc.name}</span>
+                        {active && (
+                          <span style={{
+                            width: "6px", height: "6px", borderRadius: "50%",
+                            background: loc.color, flexShrink: 0,
+                            boxShadow: `0 0 5px ${loc.color}`,
+                          }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {groupedLocations(locFilter).length === 0 && (
+                <div style={{ padding: "14px 12px", fontSize: "0.7rem", color: "#4a6a88", textAlign: "center" }}>
+                  No landmarks match "{locFilter}"
+                </div>
               )}
-            </button>
-          );
-        })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Bottom controls hint ─────────────────────────────────────────── */}
@@ -295,9 +494,26 @@ export default function HUD({
               );
             })}
           </div>
-          <div style={{ fontSize: "0.58rem", color: "#38bdf8", letterSpacing: "0.06em", textAlign: "center" }}>
-            {WEATHER[weather].label}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
+            <span style={{ fontSize: "0.58rem", color: "#38bdf8", letterSpacing: "0.06em" }}>
+              {WEATHER[weather].label}
+            </span>
+            {isLiveWeather && (
+              <span style={{
+                fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.08em",
+                color: "#34D399", border: "1px solid rgba(52,211,153,0.45)",
+                borderRadius: "3px", padding: "1px 4px",
+                background: "rgba(52,211,153,0.1)",
+              }}>
+                LIVE
+              </span>
+            )}
           </div>
+          {isLiveWeather && liveWeatherInfo && (
+            <div style={{ fontSize: "0.55rem", color: "#5a8a6a", textAlign: "center", marginTop: "1px" }}>
+              {liveWeatherInfo.tempC}°C · {liveWeatherInfo.description}
+            </div>
+          )}
         </div>
 
         {/* Clock + Time Simulator */}
